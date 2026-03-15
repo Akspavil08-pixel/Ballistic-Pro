@@ -127,9 +127,10 @@ option {
 }
 
 .scope-reticle-raster {
-  image-rendering: auto;
-  opacity: 0.96;
-  filter: none;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  opacity: 0.98;
+  filter: contrast(1.15) brightness(0.95);
   backface-visibility: hidden;
   transform-origin: center;
 }

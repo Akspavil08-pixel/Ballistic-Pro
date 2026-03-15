@@ -793,8 +793,9 @@ export function ReticleCanvas({
                       transform: "translate(-50%, -50%)",
                       objectFit: "contain",
                       mixBlendMode: "normal",
-                      imageRendering: "auto",
-                      opacity: 0.95
+                      imageRendering: "crisp-edges",
+                      opacity: 0.98,
+                      filter: "contrast(1.15) brightness(0.95)"
                     }}
                   />
                 ) : vectorStyle ? (

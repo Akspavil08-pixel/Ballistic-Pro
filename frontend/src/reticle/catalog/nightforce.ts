@@ -171,27 +171,5 @@ export const nightforceReticles: ReticleProfile[] = [
     sourceUrl: "https://www.nightforceoptics.com/content/files/products/FC-DMx-MRAD-MOA-Reticle-Sheet-2025.pdf",
     note: "LPVO FFP-сетка Nightforce с крупным кольцом и удержаниями по MIL."
   },
-  {
-    id: "nightforce-fc-dmx-moa",
-    name: "Nightforce FC-DMx (MOA)",
-    unit: "MOA",
-    focalPlane: "FFP",
-    pattern: "grid",
-    majorStep: 1,
-    minorStep: 0.5,
-    sourceUrl: "https://www.nightforceoptics.com/content/files/products/FC-DMx-MRAD-MOA-Reticle-Sheet-2025.pdf",
-    imageSourceUrl: "https://www.nightforceoptics.com/fc-dmx-moa/",
-    note: "Официальная MOA-версия FC-DMx; subtensions доступны в reticle sheet Nightforce."
-  },
-  {
-    id: "nightforce-moa-xt",
-    name: "Nightforce MOA-XT",
-    unit: "MOA",
-    focalPlane: "FFP",
-    pattern: "grid",
-    majorStep: 1,
-    minorStep: 0.5,
-    sourceUrl: "https://www.nightforceoptics.com/content/files/downloads/0323_NF_MOAXT_Reticle-Sheet.pdf",
-    note: "Официальный Nightforce reticle sheet публикует subtensions MOA-XT."
-  }
+  // Note: Reticles without official raster images are intentionally omitted to keep visuals true-to-life.
 ];
