@@ -125,6 +125,16 @@ export function ReticleCanvas({
 
   const resolvedReticleImage = resolveAsset(imageSrc);
   const resolvedTargetImage = resolveAsset(targetImageSrc);
+  const [targetImageError, setTargetImageError] = useState(false);
+  const [reticleImageError, setReticleImageError] = useState(false);
+
+  useEffect(() => {
+    setTargetImageError(false);
+  }, [resolvedTargetImage]);
+
+  useEffect(() => {
+    setReticleImageError(false);
+  }, [resolvedReticleImage]);
 
   const isOfficialVosTmoaRaster =
     imageAlt?.includes("VOS-TMOA") ||
@@ -422,7 +432,7 @@ export function ReticleCanvas({
               rx={targetShape === "circle" ? targetHalfWidth : 0.08}
             />
           </clipPath>
-          {!targetImageSrc ? (
+          {!resolvedTargetImage || targetImageError ? (
             <g clipPath={`url(#target-clip-${sceneSuffix})`}>
               {renderTarget()}
             </g>
@@ -700,7 +710,7 @@ export function ReticleCanvas({
               <div className="absolute inset-0">
                 {renderScene()}
               </div>
-              {resolvedTargetImage ? (
+              {resolvedTargetImage && !targetImageError ? (
                 <div className="absolute inset-0">
                   <img
                     src={resolvedTargetImage}
@@ -708,6 +718,7 @@ export function ReticleCanvas({
                     className="absolute scope-target-raster"
                     loading="lazy"
                     decoding="async"
+                    onError={() => setTargetImageError(true)}
                     style={{
                       left: `${targetImageLeftPercent}%`,
                       top: `${targetImageTopPercent}%`,
@@ -727,13 +738,14 @@ export function ReticleCanvas({
                   >
                     {renderStyledReticle()}
                   </div>
-                ) : resolvedReticleImage ? (
+                ) : resolvedReticleImage && !reticleImageError ? (
                   <img
                     src={resolvedReticleImage}
                     alt={imageAlt ?? "Reticle"}
                     className="absolute scope-reticle-raster"
                     loading="lazy"
                     decoding="async"
+                    onError={() => setReticleImageError(true)}
                     style={{
                       left: "50%",
                       top: "50%",
