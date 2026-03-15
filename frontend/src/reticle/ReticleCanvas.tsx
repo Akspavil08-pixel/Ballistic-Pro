@@ -777,14 +777,7 @@ export function ReticleCanvas({
                 </div>
               ) : null}
               <div className="absolute inset-0">
-                {vectorStyle ? (
-                  <div
-                    className="absolute inset-0 will-change-transform"
-                    style={{ transform: `scale(${animatedReticleScale})`, transformOrigin: "center" }}
-                  >
-                    {renderStyledReticle()}
-                  </div>
-                ) : resolvedReticleImage && !reticleImageError ? (
+                {resolvedReticleImage && !reticleImageError ? (
                   <img
                     src={resolvedReticleImage}
                     alt={imageAlt ?? "Reticle"}
@@ -799,12 +792,18 @@ export function ReticleCanvas({
                       height: `${reticleImageSizePercent}%`,
                       transform: "translate(-50%, -50%)",
                       objectFit: "contain",
-                      mixBlendMode: isOfficialVosTmoaRaster ? "multiply" : "normal",
-                      imageRendering: isOfficialVosTmoaRaster ? "auto" : "crisp-edges",
-                      opacity: 1,
-                      filter: isOfficialVosTmoaRaster ? "none" : undefined
+                      mixBlendMode: "normal",
+                      imageRendering: "auto",
+                      opacity: 0.95
                     }}
                   />
+                ) : vectorStyle ? (
+                  <div
+                    className="absolute inset-0 will-change-transform"
+                    style={{ transform: `scale(${animatedReticleScale})`, transformOrigin: "center" }}
+                  >
+                    {renderStyledReticle()}
+                  </div>
                 ) : (
                   <div
                     className="absolute inset-0 will-change-transform"

@@ -109,7 +109,8 @@ const targetModels = [
     heightCm: 110,
     shape: "rect" as const,
     style: "animal-deer" as const,
-    sourceUrl: "custom"
+    imageSrc: "targets/animal-deer.svg",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Deer_silhouette.svg"
   },
   {
     id: "boar-silhouette",
@@ -118,7 +119,8 @@ const targetModels = [
     heightCm: 60,
     shape: "rect" as const,
     style: "animal-boar" as const,
-    sourceUrl: "custom"
+    imageSrc: "targets/animal-boar.svg",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:202310_Wild_boar.svg"
   },
   {
     id: "moose-silhouette",
@@ -127,7 +129,8 @@ const targetModels = [
     heightCm: 140,
     shape: "rect" as const,
     style: "animal-moose" as const,
-    sourceUrl: "custom"
+    imageSrc: "targets/animal-moose.svg",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Elk_siluette.svg"
   },
   {
     id: "bear-silhouette",
@@ -136,7 +139,8 @@ const targetModels = [
     heightCm: 90,
     shape: "rect" as const,
     style: "animal-bear" as const,
-    sourceUrl: "custom"
+    imageSrc: "targets/animal-bear.svg",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Silhouette_of_a_Bear.svg"
   },
   {
     id: "fox-silhouette",
@@ -145,7 +149,8 @@ const targetModels = [
     heightCm: 50,
     shape: "rect" as const,
     style: "animal-fox" as const,
-    sourceUrl: "custom"
+    imageSrc: "targets/animal-fox.svg",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Fox_Silhouette_(NIH_BioArt_164_-_629964).svg"
   }
 ];
 

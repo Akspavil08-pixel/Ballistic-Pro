@@ -61,10 +61,8 @@ const vectorDetailedReticles: ReticleProfile[] = [
         { label: "BDC hold mark", value: 8.0, unit: "MOA" },
         { label: "BDC hold mark", value: 9.0, unit: "MOA" }
       ],
-      imageSrc:
-        "https://www.vectoroptics.com/public/uploads/images/20251105/4151c5155981f3c6bcdcc84fc3b15aef.png",
-      imageSourceUrl:
-        "https://www.vectoroptics.com/public/uploads/images/20251105/4151c5155981f3c6bcdcc84fc3b15aef.png",
+      imageSrc: "/reticles/vector-vos-tmoa-hq.png",
+      imageSourceUrl: "https://www.vectoroptics.com/Reticle-Collection",
       opticFov: {
         minMagnification: 1,
         maxMagnification: 10,
@@ -187,7 +185,4 @@ const vectorFamilyReticles: ReticleProfile[] = [
   )
 );
 
-export const vectorOpticsReticles: ReticleProfile[] = [
-  ...vectorDetailedReticles,
-  ...vectorFamilyReticles
-];
+export const vectorOpticsReticles: ReticleProfile[] = [...vectorDetailedReticles];

@@ -127,10 +127,9 @@ option {
 }
 
 .scope-reticle-raster {
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  opacity: 0.98;
-  filter: contrast(1.28) brightness(0.52);
+  image-rendering: auto;
+  opacity: 0.96;
+  filter: none;
   backface-visibility: hidden;
   transform-origin: center;
 }
@@ -143,20 +142,20 @@ option {
 
 /* Increase all small text sizes by 2.5x for readability */
 .text-xs {
-  font-size: calc(0.75rem * 2.5) !important;
+  font-size: calc(0.75rem * 1.5) !important;
   line-height: 1.35 !important;
 }
 
 .text-sm {
-  font-size: calc(0.875rem * 2.5) !important;
+  font-size: calc(0.875rem * 1.5) !important;
   line-height: 1.35 !important;
 }
 
 .text-\[11px\] {
-  font-size: calc(11px * 2.5) !important;
+  font-size: calc(11px * 1.5) !important;
   line-height: 1.35 !important;
 }
 
 .segment-pill {
-  font-size: calc(11px * 2.5);
+  font-size: calc(11px * 1.5);
 }
