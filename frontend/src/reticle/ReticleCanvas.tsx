@@ -115,10 +115,20 @@ export function ReticleCanvas({
   viewMode = "hold",
   opticFov
 }: ReticleProps) {
+  const resolveAsset = (path?: string) => {
+    if (!path) return path;
+    if (path.startsWith("http")) return path;
+    if (path.startsWith("/")) return `${import.meta.env.BASE_URL}${path.slice(1)}`;
+    return `${import.meta.env.BASE_URL}${path}`;
+  };
+
+  const resolvedReticleImage = resolveAsset(imageSrc);
+  const resolvedTargetImage = resolveAsset(targetImageSrc);
+
   const isOfficialVosTmoaRaster =
     imageAlt?.includes("VOS-TMOA") ||
-    imageSrc?.includes("4151c5155981f3c6bcdcc84fc3b15aef.png") ||
-    imageSrc?.includes("vector-vos-tmoa") ||
+    resolvedReticleImage?.includes("4151c5155981f3c6bcdcc84fc3b15aef.png") ||
+    resolvedReticleImage?.includes("vector-vos-tmoa") ||
     false;
   const extent = unit === "MOA" ? 20 : 6;
   const viewBox = `${-extent} ${-extent} ${extent * 2} ${extent * 2}`;
@@ -689,10 +699,10 @@ export function ReticleCanvas({
               <div className="absolute inset-0">
                 {renderScene()}
               </div>
-              {targetImageSrc ? (
+              {resolvedTargetImage ? (
                 <div className="absolute inset-0">
                   <img
-                    src={targetImageSrc}
+                    src={resolvedTargetImage}
                     alt="Target"
                     className="absolute scope-target-raster"
                     loading="lazy"
@@ -716,9 +726,9 @@ export function ReticleCanvas({
                   >
                     {renderStyledReticle()}
                   </div>
-                ) : imageSrc ? (
+                ) : resolvedReticleImage ? (
                   <img
-                    src={imageSrc}
+                    src={resolvedReticleImage}
                     alt={imageAlt ?? "Reticle"}
                     className="absolute scope-reticle-raster"
                     loading="lazy"
