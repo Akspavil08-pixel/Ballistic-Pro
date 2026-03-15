@@ -38,15 +38,6 @@ function parseMagnificationRange(label?: string | null) {
   return { min, max };
 }
 
-const ASSET_BASE = import.meta.env.BASE_URL;
-
-const withBase = (path: string) => {
-  if (!path) return path;
-  if (path.startsWith("http")) return path;
-  if (path.startsWith("/")) return `${ASSET_BASE}${path.slice(1)}`;
-  return `${ASSET_BASE}${path}`;
-};
-
 const targetModels = [
   {
     id: "chest-50",
@@ -55,7 +46,7 @@ const targetModels = [
     heightCm: 50,
     shape: "rect" as const,
     style: "chest" as const,
-    imageSrc: withBase("targets/chest-silhouette.svg"),
+    imageSrc: "targets/chest-silhouette.svg",
     sourceUrl: "local"
   },
   {
@@ -65,7 +56,7 @@ const targetModels = [
     heightCm: 150,
     shape: "rect" as const,
     style: "standing" as const,
-    imageSrc: withBase("targets/ipsc-target.svg"),
+    imageSrc: "targets/ipsc-target.svg",
     sourceUrl: "local"
   },
   {
@@ -75,7 +66,7 @@ const targetModels = [
     heightCm: 30,
     shape: "circle" as const,
     style: "paper" as const,
-    imageSrc: withBase("targets/pl7-bullseye.svg"),
+    imageSrc: "targets/pl7-bullseye.svg",
     sourceUrl: "local"
   },
   {
@@ -85,7 +76,7 @@ const targetModels = [
     heightCm: 20,
     shape: "circle" as const,
     style: "paper" as const,
-    imageSrc: withBase("targets/issf-pistol-target.svg"),
+    imageSrc: "targets/issf-pistol-target.svg",
     sourceUrl: "local"
   },
   {
@@ -95,7 +86,7 @@ const targetModels = [
     heightCm: 76,
     shape: "rect" as const,
     style: "standing" as const,
-    imageSrc: withBase("targets/ipsc-target.svg"),
+    imageSrc: "targets/ipsc-target.svg",
     sourceUrl: "local"
   },
   {
