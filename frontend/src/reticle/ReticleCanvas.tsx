@@ -118,6 +118,10 @@ export function ReticleCanvas({
   viewMode = "hold",
   opticFov
 }: ReticleProps) {
+  const reticleFrameRef = useRef<HTMLDivElement>(null);
+  const reticleCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [reticleFrameSize, setReticleFrameSize] = useState(0);
+  const [reticleBitmap, setReticleBitmap] = useState<HTMLImageElement | null>(null);
   const resolveAsset = (path?: string) => {
     if (!path) return path;
     if (path.startsWith("http")) return path;
@@ -139,11 +143,37 @@ export function ReticleCanvas({
     setReticleImageError(false);
   }, [resolvedReticleImage]);
 
-  const isOfficialVosTmoaRaster =
-    imageAlt?.includes("VOS-TMOA") ||
-    resolvedReticleImage?.includes("4151c5155981f3c6bcdcc84fc3b15aef.png") ||
-    resolvedReticleImage?.includes("vector-vos-tmoa") ||
-    false;
+  useEffect(() => {
+    if (!resolvedReticleImage) {
+      setReticleBitmap(null);
+      return;
+    }
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => setReticleBitmap(img);
+    img.onerror = () => {
+      setReticleBitmap(null);
+      setReticleImageError(true);
+    };
+    img.src = resolvedReticleImage;
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [resolvedReticleImage]);
+
+  useEffect(() => {
+    if (!reticleFrameRef.current) return;
+    const updateSize = () => {
+      const width = reticleFrameRef.current?.clientWidth ?? 0;
+      setReticleFrameSize(width);
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(reticleFrameRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   const extent = unit === "MOA" ? 20 : 6;
   const viewBox = `${-extent} ${-extent} ${extent * 2} ${extent * 2}`;
   const reticlePattern: ReticlePattern = pattern ?? {
@@ -187,14 +217,15 @@ export function ReticleCanvas({
   const sceneScaleTarget = clampedMagnification / safeMinMagnification;
   const targetScaleInReticle =
     focalPlane === "SFP" ? clampedMagnification / Math.max(maxMagnification, safeMinMagnification) : 1;
-  const targetHalfWidth = Math.max((targetWidthUnits * targetScaleInReticle) / 2, 0.08);
-  const targetHalfHeight = Math.max((targetHeightUnits * targetScaleInReticle) / 2, 0.08);
-  const bullseyeRadius = Math.max(Math.min(targetHalfWidth, targetHalfHeight) * 0.4, 0.12);
+  const minTargetHalf = 0.03;
+  const targetHalfWidth = Math.max((targetWidthUnits * targetScaleInReticle) / 2, minTargetHalf);
+  const targetHalfHeight = Math.max((targetHeightUnits * targetScaleInReticle) / 2, minTargetHalf);
+  const bullseyeRadius = Math.max(Math.min(targetHalfWidth, targetHalfHeight) * 0.4, 0.08);
   const sceneSuffix = unit.toLowerCase();
   const sfpScale = focalPlane === "SFP" ? clampedMagnification / Math.max(maxMagnification, safeMinMagnification) : 1;
   const displayHoldX = holdX * sfpScale;
   const displayHoldY = holdY * sfpScale;
-  const targetCenterRadius = Math.max(extent * 0.018, 0.12);
+  const targetCenterRadius = Math.max(extent * 0.018, 0.08);
   const aimMarkerXTarget = Math.max(-extent, Math.min(extent, displayHoldX));
   const aimMarkerYTarget = Math.max(-extent, Math.min(extent, -displayHoldY));
   const targetOffsetXTarget = viewMode === "shift-target" ? -aimMarkerXTarget : 0;
@@ -226,6 +257,7 @@ export function ReticleCanvas({
   const scaledTargetImageWidthPercent = targetImageWidthPercent * (focalPlane === "FFP" ? animatedSceneScale : 1);
   const scaledTargetImageHeightPercent = targetImageHeightPercent * (focalPlane === "FFP" ? animatedSceneScale : 1);
   const reticleImageSizePercent = animatedReticleScale * 100;
+  const reticleImageSizePx = reticleFrameSize > 0 ? reticleFrameSize * (reticleImageSizePercent / 100) : 0;
   const apparentDistanceMeters = distanceMeters / Math.max(clampedMagnification, 1e-6);
   const normalizedMagnificationForFov =
     opticFov && opticFov.maxMagnification > opticFov.minMagnification
@@ -235,6 +267,21 @@ export function ReticleCanvas({
     opticFov && normalizedMagnificationForFov !== null
       ? opticFov.minMetersAt100m + (opticFov.maxMetersAt100m - opticFov.minMetersAt100m) * normalizedMagnificationForFov
       : null;
+
+  useEffect(() => {
+    if (!reticleBitmap || !reticleCanvasRef.current || !reticleImageSizePx) return;
+    const canvas = reticleCanvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    const sizePx = Math.max(1, Math.round(reticleImageSizePx));
+    canvas.width = Math.round(sizePx * dpr);
+    canvas.height = Math.round(sizePx * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, sizePx, sizePx);
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(reticleBitmap, 0, 0, sizePx, sizePx);
+  }, [reticleBitmap, reticleImageSizePx]);
 
   const renderTarget = () => {
     if (targetStyle === "steel-plate") {
@@ -750,7 +797,10 @@ export function ReticleCanvas({
     <div className="rounded-2xl overflow-hidden border border-slate-700/70 shadow-soft">
       <div className="h-[21rem] w-full bg-black flex items-center justify-center sm:h-[23rem]">
         <div className="flex items-center justify-center h-full w-full">
-          <div className="relative h-[18.5rem] w-[18.5rem] rounded-full overflow-hidden bg-black shadow-[0_30px_90px_rgba(0,0,0,0.62)] sm:h-[20rem] sm:w-[20rem]">
+          <div
+            ref={reticleFrameRef}
+            className="relative h-[18.5rem] w-[18.5rem] rounded-full overflow-hidden bg-black shadow-[0_30px_90px_rgba(0,0,0,0.62)] sm:h-[20rem] sm:w-[20rem]"
+          >
             <div className="absolute inset-0 rounded-full border border-slate-400/50" />
             <div className="absolute inset-[3%] rounded-full overflow-hidden bg-[#f4f3ef]">
               <div className="absolute inset-0">
@@ -777,25 +827,17 @@ export function ReticleCanvas({
                 </div>
               ) : null}
               <div className="absolute inset-0">
-                {resolvedReticleImage && !reticleImageError ? (
-                  <img
-                    src={resolvedReticleImage}
-                    alt={imageAlt ?? "Reticle"}
-                    className="absolute scope-reticle-raster"
-                    loading="lazy"
-                    decoding="async"
-                    onError={() => setReticleImageError(true)}
+                {resolvedReticleImage && !reticleImageError && reticleBitmap && reticleImageSizePx > 0 ? (
+                  <canvas
+                    ref={reticleCanvasRef}
+                    className="absolute scope-reticle-canvas"
                     style={{
                       left: "50%",
                       top: "50%",
-                      width: `${reticleImageSizePercent}%`,
-                      height: `${reticleImageSizePercent}%`,
+                      width: `${reticleImageSizePx}px`,
+                      height: `${reticleImageSizePx}px`,
                       transform: "translate(-50%, -50%)",
-                      objectFit: "contain",
-                      mixBlendMode: "normal",
-                      imageRendering: "crisp-edges",
-                      opacity: 0.98,
-                      filter: "contrast(1.15) brightness(0.95)"
+                      opacity: 0.98
                     }}
                   />
                 ) : vectorStyle ? (

@@ -127,10 +127,15 @@ option {
 }
 
 .scope-reticle-raster {
-  image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
   opacity: 0.98;
-  filter: contrast(1.15) brightness(0.95);
+  backface-visibility: hidden;
+  transform-origin: center;
+}
+
+.scope-reticle-canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
   backface-visibility: hidden;
   transform-origin: center;
 }

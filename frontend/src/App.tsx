@@ -28,10 +28,10 @@ const DEFAULT_MAGNIFICATION_RANGE = { min: 3, max: 18 };
 
 function parseMagnificationRange(label?: string | null) {
   if (!label) return null;
-  const match = label.match(/(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)x/i);
+  const match = label.match(/(\d+(?:[.,]\d+)?)\s*[-–]\s*(\d+(?:[.,]\d+)?)(?:\s*[x×])?/i);
   if (!match) return null;
-  const min = Number(match[1]);
-  const max = Number(match[2]);
+  const min = Number(match[1].replace(",", "."));
+  const max = Number(match[2].replace(",", "."));
   if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max <= min) {
     return null;
   }
@@ -105,7 +105,7 @@ const targetModels = [
   {
     id: "deer-silhouette",
     name: "Силуэт оленя",
-    widthCm: 150,
+    widthCm: 160,
     heightCm: 110,
     shape: "rect" as const,
     style: "animal-deer" as const,
@@ -115,8 +115,8 @@ const targetModels = [
   {
     id: "boar-silhouette",
     name: "Силуэт кабана",
-    widthCm: 120,
-    heightCm: 70,
+    widthCm: 150,
+    heightCm: 85,
     shape: "rect" as const,
     style: "animal-boar" as const,
     imageSrc: "targets/animal-boar.svg",
@@ -125,7 +125,7 @@ const targetModels = [
   {
     id: "moose-silhouette",
     name: "Силуэт лося",
-    widthCm: 240,
+    widthCm: 280,
     heightCm: 200,
     shape: "rect" as const,
     style: "animal-moose" as const,
@@ -135,8 +135,8 @@ const targetModels = [
   {
     id: "bear-silhouette",
     name: "Силуэт медведя",
-    widthCm: 180,
-    heightCm: 120,
+    widthCm: 200,
+    heightCm: 105,
     shape: "rect" as const,
     style: "animal-bear" as const,
     imageSrc: "targets/animal-bear.svg",
@@ -145,7 +145,7 @@ const targetModels = [
   {
     id: "fox-silhouette",
     name: "Силуэт лисы",
-    widthCm: 90,
+    widthCm: 110,
     heightCm: 45,
     shape: "rect" as const,
     style: "animal-fox" as const,
@@ -234,9 +234,14 @@ export default function App() {
   const activeReticleImage = activeReticle?.imageSrc;
   const activeReticleImageAlt = activeReticle?.name;
   const magnificationRange =
-    parseMagnificationRange(activeVariant?.name) ??
-    parseMagnificationRange(activeReticle?.name) ??
-    DEFAULT_MAGNIFICATION_RANGE;
+    activeReticle?.opticFov
+      ? {
+          min: activeReticle.opticFov.minMagnification,
+          max: activeReticle.opticFov.maxMagnification
+        }
+      : parseMagnificationRange(activeVariant?.name) ??
+        parseMagnificationRange(activeReticle?.name) ??
+        DEFAULT_MAGNIFICATION_RANGE;
   const reticlePattern = activeReticle
     ? {
         type: activeReticle.pattern,
