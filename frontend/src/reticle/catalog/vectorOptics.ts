@@ -51,6 +51,7 @@ const vectorDetailedReticles: ReticleProfile[] = [
     {
       majorStep: 1,
       minorStep: 0.2,
+      vectorStyle: "vector-vos-tmoa",
       holdMarks: [2, 8, 9],
       subtensions: [
         { label: "Center scale fine hash", value: 0.2, unit: "MOA" },

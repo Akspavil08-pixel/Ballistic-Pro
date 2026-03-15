@@ -38,7 +38,10 @@ interface ReticleProps {
     | "steel-plate"
     | "steel-popper"
     | "animal-deer"
-    | "animal-boar";
+    | "animal-boar"
+    | "animal-moose"
+    | "animal-bear"
+    | "animal-fox";
   targetImageSrc?: string;
   viewMode?: "hold" | "shift-target";
   opticFov?: {
@@ -278,62 +281,105 @@ export function ReticleCanvas({
     }
 
     if (targetStyle === "animal-deer") {
+      const bodyRx = targetHalfWidth * 0.58;
+      const bodyRy = targetHalfHeight * 0.26;
       return (
-        <path
-          d={`
-            M ${-targetHalfWidth * 0.56} ${targetHalfHeight * 0.12}
-            Q ${-targetHalfWidth * 0.18} ${-targetHalfHeight * 0.28} ${targetHalfWidth * 0.16} ${-targetHalfHeight * 0.14}
-            Q ${targetHalfWidth * 0.36} ${-targetHalfHeight * 0.36} ${targetHalfWidth * 0.48} ${-targetHalfHeight * 0.06}
-            Q ${targetHalfWidth * 0.62} ${-targetHalfHeight * 0.04} ${targetHalfWidth * 0.62} ${targetHalfHeight * 0.14}
-            L ${targetHalfWidth * 0.5} ${targetHalfHeight * 0.18}
-            L ${targetHalfWidth * 0.42} ${targetHalfHeight * 0.86}
-            L ${targetHalfWidth * 0.3} ${targetHalfHeight * 0.86}
-            L ${targetHalfWidth * 0.28} ${targetHalfHeight * 0.26}
-            L ${targetHalfWidth * 0.04} ${targetHalfHeight * 0.3}
-            L ${-targetHalfWidth * 0.04} ${targetHalfHeight * 0.86}
-            L ${-targetHalfWidth * 0.16} ${targetHalfHeight * 0.86}
-            L ${-targetHalfWidth * 0.18} ${targetHalfHeight * 0.32}
-            L ${-targetHalfWidth * 0.36} ${targetHalfHeight * 0.34}
-            L ${-targetHalfWidth * 0.42} ${targetHalfHeight * 0.86}
-            L ${-targetHalfWidth * 0.54} ${targetHalfHeight * 0.86}
-            L ${-targetHalfWidth * 0.48} ${targetHalfHeight * 0.2}
-            Q ${-targetHalfWidth * 0.66} ${targetHalfHeight * 0.12} ${-targetHalfWidth * 0.56} ${targetHalfHeight * 0.12}
-            M ${targetHalfWidth * 0.5} ${-targetHalfHeight * 0.06}
-            L ${targetHalfWidth * 0.68} ${-targetHalfHeight * 0.34}
-            M ${targetHalfWidth * 0.52} ${-targetHalfHeight * 0.1}
-            L ${targetHalfWidth * 0.8} ${-targetHalfHeight * 0.22}
-            M ${targetHalfWidth * 0.46} ${-targetHalfHeight * 0.08}
-            L ${targetHalfWidth * 0.68} ${-targetHalfHeight * 0.48}
-          `}
-          fill="#1f2937"
-        />
+        <>
+          <ellipse cx={0} cy={0} rx={bodyRx} ry={bodyRy} fill="#111827" />
+          <rect x={bodyRx * 0.45} y={-bodyRy * 0.55} width={bodyRx * 0.3} height={bodyRy * 0.45} fill="#111827" />
+          <circle cx={bodyRx * 0.85} cy={-bodyRy * 0.55} r={bodyRy * 0.32} fill="#111827" />
+          <rect x={-bodyRx * 0.5} y={bodyRy * 0.6} width={bodyRx * 0.16} height={targetHalfHeight * 0.42} fill="#0f172a" />
+          <rect x={-bodyRx * 0.15} y={bodyRy * 0.6} width={bodyRx * 0.16} height={targetHalfHeight * 0.42} fill="#0f172a" />
+          <rect x={bodyRx * 0.2} y={bodyRy * 0.6} width={bodyRx * 0.16} height={targetHalfHeight * 0.42} fill="#0f172a" />
+          <rect x={bodyRx * 0.45} y={bodyRy * 0.6} width={bodyRx * 0.16} height={targetHalfHeight * 0.42} fill="#0f172a" />
+          <path
+            d={`M ${bodyRx * 0.88} ${-bodyRy * 0.9} l ${bodyRx * 0.15} ${-bodyRy * 0.35} m ${-bodyRx * 0.08} ${bodyRy * 0.1} l ${bodyRx * 0.18} ${-bodyRy * 0.25}`}
+            stroke="#111827"
+            strokeWidth={0.12}
+            strokeLinecap="round"
+          />
+        </>
+      );
+    }
+
+    if (targetStyle === "animal-moose") {
+      const bodyRx = targetHalfWidth * 0.62;
+      const bodyRy = targetHalfHeight * 0.26;
+      return (
+        <>
+          <ellipse cx={0} cy={0} rx={bodyRx} ry={bodyRy} fill="#111827" />
+          <rect x={bodyRx * 0.42} y={-bodyRy * 0.62} width={bodyRx * 0.34} height={bodyRy * 0.52} fill="#111827" />
+          <circle cx={bodyRx * 0.9} cy={-bodyRy * 0.62} r={bodyRy * 0.34} fill="#111827" />
+          <rect x={-bodyRx * 0.48} y={bodyRy * 0.6} width={bodyRx * 0.16} height={targetHalfHeight * 0.5} fill="#0f172a" />
+          <rect x={-bodyRx * 0.12} y={bodyRy * 0.6} width={bodyRx * 0.16} height={targetHalfHeight * 0.5} fill="#0f172a" />
+          <rect x={bodyRx * 0.2} y={bodyRy * 0.6} width={bodyRx * 0.16} height={targetHalfHeight * 0.5} fill="#0f172a" />
+          <rect x={bodyRx * 0.5} y={bodyRy * 0.6} width={bodyRx * 0.16} height={targetHalfHeight * 0.5} fill="#0f172a" />
+          <path
+            d={`M ${bodyRx * 0.92} ${-bodyRy * 1.05} l ${bodyRx * 0.2} ${-bodyRy * 0.4} m ${-bodyRx * 0.15} ${bodyRy * 0.1} l ${bodyRx * 0.28} ${-bodyRy * 0.25}`}
+            stroke="#111827"
+            strokeWidth={0.14}
+            strokeLinecap="round"
+          />
+          <path
+            d={`M ${bodyRx * 0.88} ${-bodyRy * 1.0} l ${-bodyRx * 0.2} ${-bodyRy * 0.45} m ${bodyRx * 0.1} ${bodyRy * 0.12} l ${-bodyRx * 0.28} ${-bodyRy * 0.3}`}
+            stroke="#111827"
+            strokeWidth={0.14}
+            strokeLinecap="round"
+          />
+        </>
+      );
+    }
+
+    if (targetStyle === "animal-bear") {
+      const bodyRx = targetHalfWidth * 0.62;
+      const bodyRy = targetHalfHeight * 0.32;
+      return (
+        <>
+          <ellipse cx={0} cy={0} rx={bodyRx} ry={bodyRy} fill="#111827" />
+          <circle cx={bodyRx * 0.85} cy={-bodyRy * 0.3} r={bodyRy * 0.38} fill="#111827" />
+          <rect x={-bodyRx * 0.55} y={bodyRy * 0.55} width={bodyRx * 0.2} height={targetHalfHeight * 0.4} fill="#0f172a" />
+          <rect x={-bodyRx * 0.2} y={bodyRy * 0.55} width={bodyRx * 0.2} height={targetHalfHeight * 0.4} fill="#0f172a" />
+          <rect x={bodyRx * 0.2} y={bodyRy * 0.55} width={bodyRx * 0.2} height={targetHalfHeight * 0.4} fill="#0f172a" />
+          <rect x={bodyRx * 0.5} y={bodyRy * 0.55} width={bodyRx * 0.2} height={targetHalfHeight * 0.4} fill="#0f172a" />
+          <circle cx={bodyRx * 0.95} cy={-bodyRy * 0.55} r={bodyRy * 0.12} fill="#0f172a" />
+        </>
+      );
+    }
+
+    if (targetStyle === "animal-fox") {
+      const bodyRx = targetHalfWidth * 0.58;
+      const bodyRy = targetHalfHeight * 0.22;
+      return (
+        <>
+          <ellipse cx={0} cy={0} rx={bodyRx} ry={bodyRy} fill="#111827" />
+          <circle cx={bodyRx * 0.85} cy={-bodyRy * 0.4} r={bodyRy * 0.26} fill="#111827" />
+          <polygon
+            points={`${-bodyRx * 0.9},${bodyRy * 0.1} ${-bodyRx * 1.3},${-bodyRy * 0.3} ${-bodyRx * 1.15},${bodyRy * 0.55}`}
+            fill="#111827"
+          />
+          <rect x={-bodyRx * 0.4} y={bodyRy * 0.5} width={bodyRx * 0.16} height={targetHalfHeight * 0.4} fill="#0f172a" />
+          <rect x={-bodyRx * 0.05} y={bodyRy * 0.5} width={bodyRx * 0.16} height={targetHalfHeight * 0.4} fill="#0f172a" />
+          <rect x={bodyRx * 0.25} y={bodyRy * 0.5} width={bodyRx * 0.16} height={targetHalfHeight * 0.4} fill="#0f172a" />
+        </>
       );
     }
 
     if (targetStyle === "animal-boar") {
+      const bodyRx = targetHalfWidth * 0.62;
+      const bodyRy = targetHalfHeight * 0.26;
       return (
-        <path
-          d={`
-            M ${-targetHalfWidth * 0.6} ${targetHalfHeight * 0.08}
-            Q ${-targetHalfWidth * 0.46} ${-targetHalfHeight * 0.12} ${-targetHalfWidth * 0.16} ${-targetHalfHeight * 0.2}
-            Q ${targetHalfWidth * 0.12} ${-targetHalfHeight * 0.3} ${targetHalfWidth * 0.46} ${-targetHalfHeight * 0.18}
-            Q ${targetHalfWidth * 0.68} ${-targetHalfHeight * 0.02} ${targetHalfWidth * 0.62} ${targetHalfHeight * 0.14}
-            L ${targetHalfWidth * 0.42} ${targetHalfHeight * 0.2}
-            L ${targetHalfWidth * 0.42} ${targetHalfHeight * 0.84}
-            L ${targetHalfWidth * 0.3} ${targetHalfHeight * 0.84}
-            L ${targetHalfWidth * 0.26} ${targetHalfHeight * 0.24}
-            L ${targetHalfWidth * 0.04} ${targetHalfHeight * 0.24}
-            L ${0} ${targetHalfHeight * 0.84}
-            L ${-targetHalfWidth * 0.12} ${targetHalfHeight * 0.84}
-            L ${-targetHalfWidth * 0.16} ${targetHalfHeight * 0.24}
-            L ${-targetHalfWidth * 0.34} ${targetHalfHeight * 0.2}
-            L ${-targetHalfWidth * 0.38} ${targetHalfHeight * 0.84}
-            L ${-targetHalfWidth * 0.5} ${targetHalfHeight * 0.84}
-            L ${-targetHalfWidth * 0.48} ${targetHalfHeight * 0.18}
-            Q ${-targetHalfWidth * 0.7} ${targetHalfHeight * 0.12} ${-targetHalfWidth * 0.6} ${targetHalfHeight * 0.08}
-          `}
-          fill="#111827"
-        />
+        <>
+          <ellipse cx={0} cy={0} rx={bodyRx} ry={bodyRy} fill="#111827" />
+          <circle cx={bodyRx * 0.82} cy={-bodyRy * 0.35} r={bodyRy * 0.32} fill="#111827" />
+          <rect x={-bodyRx * 0.5} y={bodyRy * 0.6} width={bodyRx * 0.18} height={targetHalfHeight * 0.38} fill="#0f172a" />
+          <rect x={-bodyRx * 0.15} y={bodyRy * 0.6} width={bodyRx * 0.18} height={targetHalfHeight * 0.38} fill="#0f172a" />
+          <rect x={bodyRx * 0.2} y={bodyRy * 0.6} width={bodyRx * 0.18} height={targetHalfHeight * 0.38} fill="#0f172a" />
+          <rect x={bodyRx * 0.45} y={bodyRy * 0.6} width={bodyRx * 0.18} height={targetHalfHeight * 0.38} fill="#0f172a" />
+          <polygon
+            points={`${bodyRx * 0.95},${-bodyRy * 0.3} ${bodyRx * 1.15},${-bodyRy * 0.05} ${bodyRx * 0.95},${bodyRy * 0.1}`}
+            fill="#111827"
+          />
+        </>
       );
     }
 

@@ -140,3 +140,23 @@ option {
     radial-gradient(circle at 32% 20%, rgba(255, 255, 255, 0.22), transparent 22%),
     radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.02), transparent 60%);
 }
+
+/* Increase all small text sizes by 2.5x for readability */
+.text-xs {
+  font-size: calc(0.75rem * 2.5) !important;
+  line-height: 1.35 !important;
+}
+
+.text-sm {
+  font-size: calc(0.875rem * 2.5) !important;
+  line-height: 1.35 !important;
+}
+
+.text-\[11px\] {
+  font-size: calc(11px * 2.5) !important;
+  line-height: 1.35 !important;
+}
+
+.segment-pill {
+  font-size: calc(11px * 2.5);
+}

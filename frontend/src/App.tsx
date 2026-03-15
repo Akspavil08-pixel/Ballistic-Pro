@@ -46,7 +46,6 @@ const targetModels = [
     heightCm: 50,
     shape: "rect" as const,
     style: "chest" as const,
-    imageSrc: "targets/chest-silhouette.svg",
     sourceUrl: "local"
   },
   {
@@ -56,7 +55,6 @@ const targetModels = [
     heightCm: 150,
     shape: "rect" as const,
     style: "standing" as const,
-    imageSrc: "targets/ipsc-target.svg",
     sourceUrl: "local"
   },
   {
@@ -66,7 +64,6 @@ const targetModels = [
     heightCm: 30,
     shape: "circle" as const,
     style: "paper" as const,
-    imageSrc: "targets/pl7-bullseye.svg",
     sourceUrl: "local"
   },
   {
@@ -76,7 +73,6 @@ const targetModels = [
     heightCm: 20,
     shape: "circle" as const,
     style: "paper" as const,
-    imageSrc: "targets/issf-pistol-target.svg",
     sourceUrl: "local"
   },
   {
@@ -86,7 +82,6 @@ const targetModels = [
     heightCm: 76,
     shape: "rect" as const,
     style: "standing" as const,
-    imageSrc: "targets/ipsc-target.svg",
     sourceUrl: "local"
   },
   {
@@ -114,7 +109,7 @@ const targetModels = [
     heightCm: 110,
     shape: "rect" as const,
     style: "animal-deer" as const,
-    sourceUrl: "https://commons.wikimedia.org/wiki/File:Deer_silhouette.svg"
+    sourceUrl: "custom"
   },
   {
     id: "boar-silhouette",
@@ -123,7 +118,34 @@ const targetModels = [
     heightCm: 60,
     shape: "rect" as const,
     style: "animal-boar" as const,
-    sourceUrl: "https://commons.wikimedia.org/wiki/File:202310_Wild_boar.svg"
+    sourceUrl: "custom"
+  },
+  {
+    id: "moose-silhouette",
+    name: "Силуэт лося",
+    widthCm: 120,
+    heightCm: 140,
+    shape: "rect" as const,
+    style: "animal-moose" as const,
+    sourceUrl: "custom"
+  },
+  {
+    id: "bear-silhouette",
+    name: "Силуэт медведя",
+    widthCm: 140,
+    heightCm: 90,
+    shape: "rect" as const,
+    style: "animal-bear" as const,
+    sourceUrl: "custom"
+  },
+  {
+    id: "fox-silhouette",
+    name: "Силуэт лисы",
+    widthCm: 90,
+    heightCm: 50,
+    shape: "rect" as const,
+    style: "animal-fox" as const,
+    sourceUrl: "custom"
   }
 ];
 
