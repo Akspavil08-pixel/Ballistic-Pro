@@ -702,7 +702,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen app-shell" data-mobile-pane={mobilePane}>
+    <div className="min-h-screen app-shell strelok-ui" data-mobile-pane={mobilePane}>
       <div className="app-header">
         <div className="mx-auto mobile-shell px-4 py-4 flex flex-col gap-3">
           <div>
@@ -753,26 +753,10 @@ export default function App() {
         </div>
       </div>
       <div className="app-body mx-auto desktop-shell px-4 py-4">
-        <div className="mobile-toggle-bar mobile-only">
-          <button
-            type="button"
-            onClick={() => setMobilePane("input")}
-            className={`segment-pill ${mobilePane === "input" ? "active" : ""}`}
-          >
-            Ввод данных
-          </button>
-          <button
-            type="button"
-            onClick={() => setMobilePane("output")}
-            className={`segment-pill ${mobilePane === "output" ? "active" : ""}`}
-          >
-            Вывод
-          </button>
-        </div>
         <div className="dashboard-grid">
           <div className="panel left-panel">
             {training ? (
-              <div className="rounded-xl border border-slate-700/70 bg-slate-900/80 p-4 shadow-soft">
+              <div className="training-card rounded-xl border border-slate-700/70 bg-slate-900/80 p-4 shadow-soft">
                 <div className="flex items-center gap-3">
                   <InfoIcon className="h-6 w-6 text-ocean" />
                   <h2 className="font-display text-base text-white">Режим обучения</h2>
@@ -1060,68 +1044,72 @@ export default function App() {
 
             {activeSection === "weather" ? (
               <SectionCard title="4. Погода" subtitle="Текущие условия">
-            <Field
-              id="temp"
-              label="Температура"
-              tooltipKey="temperature"
-              value={weather.temperature_c}
-              onChange={(v) => setWeather((w) => ({ ...w, temperature_c: Number(v) }))}
-              unit="°C"
-              step={1}
-              icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
-            />
-            <Field
-              id="pressure"
-              label="Давление"
-              tooltipKey="pressure"
-              value={weather.pressure_hpa}
-              onChange={(v) => setWeather((w) => ({ ...w, pressure_hpa: Number(v) }))}
-              unit="гПа"
-              step={1}
-              icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
-            />
-            <Field
-              id="humidity"
-              label="Влажность"
-              tooltipKey="humidity"
-              value={weather.humidity_percent}
-              onChange={(v) => setWeather((w) => ({ ...w, humidity_percent: Number(v) }))}
-              unit="%"
-              step={1}
-              icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
-            />
-            <Field
-              id="altitude"
-              label="Высота"
-              tooltipKey="altitude"
-              value={weather.altitude_m}
-              onChange={(v) => setWeather((w) => ({ ...w, altitude_m: Number(v) }))}
-              unit="м"
-              step={1}
-              icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
-            />
-            <Field
-              id="wind"
-              label="Скорость ветра"
-              tooltipKey="windSpeed"
-              value={weather.wind_speed_mps}
-              onChange={(v) =>
-                setWeather((w) => ({
-                  ...w,
-                  wind_speed_mps: Math.max(0, Number(v))
-                }))
-              }
-              unit="м/с"
-              step={0.1}
-              min={0}
-              icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
-            />
-            <div className="mt-3">
-              <WindDial
-                directionDeg={weather.wind_direction_deg}
-                speedMps={weather.wind_speed_mps}
-                onChange={(value) => setWeather((w) => ({ ...w, wind_direction_deg: value }))}
-              />
+            <div className="weather-strelok">
+              <div className="weather-readouts">
+                <Field
+                  id="temp"
+                  label="Температура"
+                  tooltipKey="temperature"
+                  value={weather.temperature_c}
+                  onChange={(v) => setWeather((w) => ({ ...w, temperature_c: Number(v) }))}
+                  unit="°C"
+                  step={1}
+                  icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
+                />
+                <Field
+                  id="pressure"
+                  label="Давление"
+                  tooltipKey="pressure"
+                  value={weather.pressure_hpa}
+                  onChange={(v) => setWeather((w) => ({ ...w, pressure_hpa: Number(v) }))}
+                  unit="гПа"
+                  step={1}
+                  icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
+                />
+                <Field
+                  id="humidity"
+                  label="Влажность"
+                  tooltipKey="humidity"
+                  value={weather.humidity_percent}
+                  onChange={(v) => setWeather((w) => ({ ...w, humidity_percent: Number(v) }))}
+                  unit="%"
+                  step={1}
+                  icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
+                />
+                <Field
+                  id="altitude"
+                  label="Высота"
+                  tooltipKey="altitude"
+                  value={weather.altitude_m}
+                  onChange={(v) => setWeather((w) => ({ ...w, altitude_m: Number(v) }))}
+                  unit="м"
+                  step={1}
+                  icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
+                />
+              </div>
+              <div className="weather-dial">
+                <WindDial
+                  directionDeg={weather.wind_direction_deg}
+                  speedMps={weather.wind_speed_mps}
+                  onChange={(value) => setWeather((w) => ({ ...w, wind_direction_deg: value }))}
+                />
+                <Field
+                  id="wind"
+                  label="Скорость ветра"
+                  tooltipKey="windSpeed"
+                  value={weather.wind_speed_mps}
+                  onChange={(v) =>
+                    setWeather((w) => ({
+                      ...w,
+                      wind_speed_mps: Math.max(0, Number(v))
+                    }))
+                  }
+                  unit="м/с"
+                  step={0.1}
+                  min={0}
+                  icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
+                />
+              </div>
             </div>
               </SectionCard>
             ) : null}
@@ -1571,23 +1559,26 @@ export default function App() {
             ) : null}
 
             {rightTab === "reticle" ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <ResultIcon className="h-5 w-5 text-ocean" />
-                <h2 className="font-display text-base text-white">Симуляция прицела</h2>
+            <div className="reticle-panel space-y-3">
+              <div className="reticle-header flex items-center justify-between">
+                <div className="reticle-title">
+                  <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Reticle</p>
+                  <p className="text-sm text-white">Симуляция прицела</p>
+                </div>
+                <div className="reticle-mode">
+                  <span className="text-xs text-slate-400">
+                    {optic.unit} · {activeReticle?.focalPlane === "FFP" ? "FFP" : "SFP"}
+                  </span>
+                </div>
               </div>
-              <div className="rounded-xl border border-slate-700/70 bg-slate-900/70 p-4">
-                <div className="flex items-center justify-between gap-3 text-xs">
-                  <div>
-                    <p className="text-slate-300">Кратность</p>
-                    <p className="mt-1 font-semibold text-white">
-                      {magnification.toFixed(1)}x
-                    </p>
-                  </div>
-                  <div className="text-right text-slate-400">
-                    <p>{magnificationRange.min.toFixed(1)}x - {magnificationRange.max.toFixed(1)}x</p>
-                    <p>{activeReticle?.focalPlane === "FFP" ? "FFP" : "SFP"} · масштаб мишени</p>
-                  </div>
+
+              <div className="reticle-controls">
+                <div className="reticle-zoom">
+                  <span className="text-xs text-slate-400">Кратность</span>
+                  <span className="text-lg text-white font-semibold">{magnification.toFixed(1)}x</span>
+                  <span className="text-[11px] text-slate-500">
+                    {magnificationRange.min.toFixed(1)}x - {magnificationRange.max.toFixed(1)}x
+                  </span>
                 </div>
                 <input
                   type="range"
@@ -1596,34 +1587,28 @@ export default function App() {
                   step={0.1}
                   value={magnification}
                   onChange={(event) => setMagnification(Number(event.target.value))}
-                  className="scope-slider mt-4 w-full"
+                  className="scope-slider reticle-slider"
                 />
-                <div className="mt-4 flex gap-2">
+                <div className="reticle-toggle">
                   <button
                     type="button"
                     onClick={() => setReticleViewMode("hold")}
-                    className={`rounded-lg px-3 py-2 text-xs border transition ${
-                      reticleViewMode === "hold"
-                        ? "bg-emerald-500/80 text-white border-emerald-400/60"
-                        : "bg-slate-900/70 border-slate-700/70 text-slate-300"
-                    }`}
+                    className={`reticle-pill ${reticleViewMode === "hold" ? "active" : ""}`}
                   >
-                    Точка выноса
+                    Вынос
                   </button>
                   <button
                     type="button"
                     onClick={() => setReticleViewMode("shift-target")}
-                    className={`rounded-lg px-3 py-2 text-xs border transition ${
-                      reticleViewMode === "shift-target"
-                        ? "bg-emerald-500/80 text-white border-emerald-400/60"
-                        : "bg-slate-900/70 border-slate-700/70 text-slate-300"
-                    }`}
+                    className={`reticle-pill ${reticleViewMode === "shift-target" ? "active" : ""}`}
                   >
-                    Смещение цели
+                    Смещение
                   </button>
                 </div>
               </div>
-              <ReticleCanvas
+
+              <div className="reticle-frame">
+                <ReticleCanvas
                   holdX={horizontalCorrection}
                   leadX={movingTargetData?.leadUnits ?? 0}
                   leadY={movingTargetData?.verticalLeadUnits ?? 0}
@@ -1646,22 +1631,23 @@ export default function App() {
                   targetMotion={
                     movingTarget.enabled
                       ? {
-                        enabled: movingTarget.enabled,
-                        speedMps: movingTarget.speed_mps,
-                        directionDeg: movingTarget.direction_deg,
-                        verticalSpeedMps: movingTarget.vertical_speed_mps,
-                        pattern: movingTarget.pattern,
-                        arcRadiusM: movingTarget.arc_radius_m,
-                        arcDirection: movingTarget.arc_direction,
-                        zigzagAngleDeg: movingTarget.zigzag_angle_deg,
-                        zigzagPeriodS: movingTarget.zigzag_period_s,
-                        animationStyle: movingTarget.animation_style
-                      }
+                          enabled: movingTarget.enabled,
+                          speedMps: movingTarget.speed_mps,
+                          directionDeg: movingTarget.direction_deg,
+                          verticalSpeedMps: movingTarget.vertical_speed_mps,
+                          pattern: movingTarget.pattern,
+                          arcRadiusM: movingTarget.arc_radius_m,
+                          arcDirection: movingTarget.arc_direction,
+                          zigzagAngleDeg: movingTarget.zigzag_angle_deg,
+                          zigzagPeriodS: movingTarget.zigzag_period_s,
+                          animationStyle: movingTarget.animation_style
+                        }
                       : undefined
                   }
-                viewMode={reticleViewMode}
-                opticFov={activeReticle?.opticFov}
-              />
+                  viewMode={reticleViewMode}
+                  opticFov={activeReticle?.opticFov}
+                />
+              </div>
             </div>
             ) : null}
 

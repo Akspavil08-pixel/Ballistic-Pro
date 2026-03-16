@@ -99,14 +99,156 @@ option {
   gap: 12px;
 }
 
+.strelok-ui .card-glass {
+  background: #0b0f12;
+  border: 1px solid #1f2a33;
+}
+
+.strelok-ui .strelok-card-title {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.strelok-ui .strelok-card-subtitle {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.strelok-ui .field-label {
+  color: #9ca3af;
+}
+
+.strelok-ui .field-control {
+  background: #0f1318;
+  border-color: #24303a;
+  color: #e5e7eb;
+}
+
+.strelok-ui .stat-card {
+  background: #0b0f12;
+  border-color: #1f2a33;
+}
+
+.strelok-ui .stat-label {
+  color: #6b7280;
+}
+
+.strelok-ui .stat-value {
+  color: #31ff31;
+  font-weight: 700;
+}
+
+.strelok-ui .reticle-panel {
+  background: #0b0f12;
+  border: 1px solid #1f2a33;
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.strelok-ui .reticle-header {
+  border-bottom: 1px solid #1f2a33;
+  padding-bottom: 10px;
+}
+
+.strelok-ui .reticle-controls {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 160px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.strelok-ui .reticle-zoom {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.strelok-ui .reticle-toggle {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.strelok-ui .reticle-pill {
+  border: 1px solid #24303a;
+  background: #0f1318;
+  color: #9ca3af;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.strelok-ui .reticle-pill.active {
+  color: #ffffff;
+  border-color: rgba(16, 185, 129, 0.6);
+  background: rgba(16, 185, 129, 0.18);
+}
+
+.strelok-ui .reticle-slider {
+  margin-top: 0;
+}
+
+.strelok-ui .reticle-frame {
+  border: 1px solid #1f2a33;
+  border-radius: 14px;
+  background: #050607;
+  padding: 8px;
+}
+
+.strelok-ui .weather-strelok {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.strelok-ui .weather-readouts {
+  display: grid;
+  gap: 10px;
+}
+
+.strelok-ui .weather-dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.strelok-ui .weather-readouts .field-control,
+.strelok-ui .weather-dial .field-control {
+  background: #0a0d12;
+  border-color: #1f2a33;
+  color: #31ff31;
+  font-weight: 600;
+}
+
+.strelok-ui .weather-readouts .field-label,
+.strelok-ui .weather-dial .field-label {
+  color: #8b949e;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
 @media (max-width: 1024px) {
+  body {
+    overflow: hidden;
+  }
+
+  .app-shell {
+    height: 100dvh;
+  }
+
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
 
   .app-body {
-    overflow: auto;
-    padding-bottom: 80px;
+    overflow: hidden;
+    padding-bottom: 72px;
   }
 
   .panel {
@@ -114,7 +256,12 @@ option {
   }
 
   .panel-content {
-    overflow: visible;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .training-card {
+    display: none;
   }
 
   .mobile-only {
@@ -123,6 +270,38 @@ option {
 
   .desktop-only {
     display: none;
+  }
+
+  .strelok-ui .field-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+  }
+
+  .strelok-ui .field-label {
+    font-size: 12px;
+  }
+
+  .strelok-ui .field-input {
+    justify-self: end;
+    width: 100%;
+  }
+
+  .strelok-ui .field-control {
+    text-align: right;
+  }
+
+  .strelok-ui .weather-strelok {
+    grid-template-columns: 1fr;
+  }
+
+  .strelok-ui .reticle-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .strelok-ui .reticle-toggle {
+    justify-content: flex-start;
   }
   .app-shell[data-mobile-pane="input"] .right-panel {
     display: none;
@@ -133,8 +312,10 @@ option {
   }
 
   .mobile-bottom-nav {
-    position: sticky;
+    position: fixed;
     bottom: 0;
+    left: 0;
+    right: 0;
     z-index: 30;
     display: flex;
     gap: 6px;
