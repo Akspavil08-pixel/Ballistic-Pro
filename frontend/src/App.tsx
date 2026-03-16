@@ -31,9 +31,12 @@ const targetMotionTypes = [
   { id: "walk", label: "Человек (шаг ~1.5 м/с)", speed: 1.5 },
   { id: "run", label: "Человек (бег ~4 м/с)", speed: 4 },
   { id: "boar", label: "Кабан (рывок ~6 м/с)", speed: 6 },
-  { id: "deer", label: "Олень/лось (галоп ~7 м/с)", speed: 7 },
+  { id: "deer", label: "Олень (галоп ~6.5 м/с)", speed: 6.5 },
+  { id: "moose", label: "Лось (галоп ~6 м/с)", speed: 6 },
   { id: "bear", label: "Медведь (быстро ~5 м/с)", speed: 5 },
+  { id: "wolf", label: "Волк (рысь ~5 м/с)", speed: 5 },
   { id: "fox", label: "Лиса (быстро ~4 м/с)", speed: 4 },
+  { id: "roe", label: "Косуля (галоп ~6 м/с)", speed: 6 },
   { id: "vehicle", label: "Авто медленно ~15 м/с", speed: 15 },
   { id: "custom", label: "Свой (ввести вручную)", speed: null }
 ];
@@ -58,6 +61,12 @@ const motionPatternOptions = [
 const motionArcDirections = [
   { value: "right", label: "Поворот вправо" },
   { value: "left", label: "Поворот влево" }
+];
+
+const motionAnimationStyles = [
+  { value: "smooth", label: "Плавно" },
+  { value: "trot", label: "Рысь" },
+  { value: "run", label: "Бег" }
 ];
 
 const clampDistance = (value: number, max: number) => Math.max(0, Math.min(value, max));
@@ -238,6 +247,36 @@ const targetModels = [
     style: "animal-fox" as const,
     imageSrc: "targets/animal-fox.svg",
     sourceUrl: "https://commons.wikimedia.org/wiki/File:Fox_Silhouette_(NIH_BioArt_164_-_629964).svg"
+  },
+  {
+    id: "wolf-silhouette",
+    name: "Силуэт волка",
+    widthCm: 150,
+    heightCm: 85,
+    shape: "rect" as const,
+    style: "animal-wolf" as const,
+    imageSrc: "targets/animal-wolf.svg",
+    sourceUrl: "local"
+  },
+  {
+    id: "roe-silhouette",
+    name: "Силуэт косули",
+    widthCm: 120,
+    heightCm: 85,
+    shape: "rect" as const,
+    style: "animal-roe" as const,
+    imageSrc: "targets/animal-roe.svg",
+    sourceUrl: "local"
+  },
+  {
+    id: "human-silhouette",
+    name: "Силуэт человека",
+    widthCm: 45,
+    heightCm: 170,
+    shape: "rect" as const,
+    style: "animal-human" as const,
+    imageSrc: "targets/animal-human.svg",
+    sourceUrl: "local"
   }
 ];
 
@@ -302,6 +341,11 @@ export default function App() {
   });
 
   const [targetId, setTargetId] = useState(targetModels[0].id);
+  const [targetSizeOverride, setTargetSizeOverride] = useState({
+    enabled: false,
+    widthCm: targetModels[0].widthCm,
+    heightCm: targetModels[0].heightCm
+  });
   const [movingTarget, setMovingTarget] = useState({
     enabled: false,
     type: "walk",
@@ -312,7 +356,8 @@ export default function App() {
     arc_radius_m: 60,
     arc_direction: "right",
     zigzag_angle_deg: 25,
-    zigzag_period_s: 2.4
+    zigzag_period_s: 2.4,
+    animation_style: "smooth"
   });
 
   const [training, setTraining] = useState(true);
@@ -565,6 +610,16 @@ export default function App() {
     () => targetModels.find((item) => item.id === targetId) ?? targetModels[0],
     [targetId]
   );
+
+  useEffect(() => {
+    if (!targetSizeOverride.enabled) {
+      setTargetSizeOverride((prev) => ({
+        ...prev,
+        widthCm: target.widthCm,
+        heightCm: target.heightCm
+      }));
+    }
+  }, [targetId, target.widthCm, target.heightCm, targetSizeOverride.enabled]);
 
   const tableRows = useMemo(() => {
     if (!result?.table) return [];
@@ -1069,9 +1124,49 @@ export default function App() {
               }))}
               icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
             />
+            <div className="mt-2">
+              <Toggle
+                label="Свой размер цели"
+                checked={targetSizeOverride.enabled}
+                onChange={(value) =>
+                  setTargetSizeOverride((prev) => ({
+                    ...prev,
+                    enabled: value,
+                    widthCm: value ? prev.widthCm : target.widthCm,
+                    heightCm: value ? prev.heightCm : target.heightCm
+                  }))
+                }
+              />
+            </div>
+            {targetSizeOverride.enabled ? (
+              <div className="grid gap-2">
+                <Field
+                  id="target-width-custom"
+                  label="Ширина цели"
+                  tooltipKey="target"
+                  value={targetSizeOverride.widthCm}
+                  onChange={(v) => setTargetSizeOverride((prev) => ({ ...prev, widthCm: Number(v) }))}
+                  unit="см"
+                  step={1}
+                  icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                />
+                <Field
+                  id="target-height-custom"
+                  label="Высота цели"
+                  tooltipKey="target"
+                  value={targetSizeOverride.heightCm}
+                  onChange={(v) => setTargetSizeOverride((prev) => ({ ...prev, heightCm: Number(v) }))}
+                  unit="см"
+                  step={1}
+                  icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                />
+              </div>
+            ) : null}
             <div className="rounded-lg border border-slate-700/70 bg-slate-900/70 p-3 text-xs text-slate-300">
               <p className="font-semibold text-white">Размер мишени</p>
-              <p className="mt-1 text-slate-200">{target.widthCm} × {target.heightCm} см</p>
+              <p className="mt-1 text-slate-200">
+                {targetSizeOverride.enabled ? `${targetSizeOverride.widthCm} × ${targetSizeOverride.heightCm}` : `${target.widthCm} × ${target.heightCm}`} см
+              </p>
             </div>
             <Field
               id="shot-angle"
@@ -1100,6 +1195,20 @@ export default function App() {
                   onChange={(v) => {
                     const nextType = v;
                     const preset = targetMotionTypes.find((item) => item.id === nextType);
+                    const targetMap: Record<string, string> = {
+                      boar: "boar-silhouette",
+                      deer: "deer-silhouette",
+                      moose: "moose-silhouette",
+                      bear: "bear-silhouette",
+                      fox: "fox-silhouette",
+                      wolf: "wolf-silhouette",
+                      roe: "roe-silhouette",
+                      walk: "human-silhouette",
+                      run: "human-silhouette"
+                    };
+                    if (targetMap[nextType]) {
+                      setTargetId(targetMap[nextType]);
+                    }
                     setMovingTarget((m) => ({
                       ...m,
                       type: nextType,
@@ -1155,6 +1264,15 @@ export default function App() {
                   value={movingTarget.pattern}
                   onChange={(v) => setMovingTarget((m) => ({ ...m, pattern: v }))}
                   options={motionPatternOptions}
+                  icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                />
+                <SelectField
+                  id="moving-target-animation"
+                  label="Анимация движения"
+                  tooltipKey="target"
+                  value={movingTarget.animation_style}
+                  onChange={(v) => setMovingTarget((m) => ({ ...m, animation_style: v }))}
+                  options={motionAnimationStyles}
                   icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
                 />
                 {movingTarget.pattern === "arc" ? (
@@ -1426,26 +1544,42 @@ export default function App() {
                   </button>
                 </div>
               </div>
-              <ReticleCanvas
-                holdX={horizontalCorrection}
-                leadX={movingTargetData?.leadUnits ?? 0}
-                leadY={movingTargetData?.verticalLeadUnits ?? 0}
-                holdY={effectiveRow ? effectiveRow.correction : 0}
-                unit={optic.unit as "MIL" | "MOA"}
-                pattern={reticlePattern}
-                imageSrc={activeReticleImage}
-                imageAlt={activeReticleImageAlt}
-                vectorStyle={activeReticle?.vectorStyle}
-                focalPlane={activeReticle?.focalPlane}
-                magnification={magnification}
-                minMagnification={magnificationRange.min}
-                maxMagnification={magnificationRange.max}
-                distanceMeters={geometry.distance_m}
-                targetWidthCm={target.widthCm}
-                targetHeightCm={target.heightCm}
-                targetShape={target.shape}
-                targetStyle={target.style}
-                targetImageSrc={target.imageSrc}
+                <ReticleCanvas
+                  holdX={horizontalCorrection}
+                  leadX={movingTargetData?.leadUnits ?? 0}
+                  leadY={movingTargetData?.verticalLeadUnits ?? 0}
+                  holdY={effectiveRow ? effectiveRow.correction : 0}
+                  unit={optic.unit as "MIL" | "MOA"}
+                  pattern={reticlePattern}
+                  imageSrc={activeReticleImage}
+                  imageAlt={activeReticleImageAlt}
+                  vectorStyle={activeReticle?.vectorStyle}
+                  focalPlane={activeReticle?.focalPlane}
+                  magnification={magnification}
+                  minMagnification={magnificationRange.min}
+                  maxMagnification={magnificationRange.max}
+                  distanceMeters={geometry.distance_m}
+                  targetWidthCm={targetSizeOverride.enabled ? targetSizeOverride.widthCm : target.widthCm}
+                  targetHeightCm={targetSizeOverride.enabled ? targetSizeOverride.heightCm : target.heightCm}
+                  targetShape={target.shape}
+                  targetStyle={target.style}
+                  targetImageSrc={target.imageSrc}
+                  targetMotion={
+                    movingTarget.enabled
+                      ? {
+                        enabled: movingTarget.enabled,
+                        speedMps: movingTarget.speed_mps,
+                        directionDeg: movingTarget.direction_deg,
+                        verticalSpeedMps: movingTarget.vertical_speed_mps,
+                        pattern: movingTarget.pattern,
+                        arcRadiusM: movingTarget.arc_radius_m,
+                        arcDirection: movingTarget.arc_direction,
+                        zigzagAngleDeg: movingTarget.zigzag_angle_deg,
+                        zigzagPeriodS: movingTarget.zigzag_period_s,
+                        animationStyle: movingTarget.animation_style
+                      }
+                      : undefined
+                  }
                 viewMode={reticleViewMode}
                 opticFov={activeReticle?.opticFov}
               />

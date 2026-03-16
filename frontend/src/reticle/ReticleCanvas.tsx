@@ -43,7 +43,10 @@ interface ReticleProps {
     | "animal-boar"
     | "animal-moose"
     | "animal-bear"
-    | "animal-fox";
+    | "animal-fox"
+    | "animal-wolf"
+    | "animal-roe"
+    | "animal-human";
   targetImageSrc?: string;
   viewMode?: "hold" | "shift-target";
   opticFov?: {
@@ -53,10 +56,23 @@ interface ReticleProps {
     maxMetersAt100m: number;
     sourceUrl?: string;
   };
+  targetMotion?: {
+    enabled?: boolean;
+    speedMps: number;
+    directionDeg: number;
+    verticalSpeedMps: number;
+    pattern?: "straight" | "arc" | "zigzag";
+    arcRadiusM?: number;
+    arcDirection?: "left" | "right";
+    zigzagAngleDeg?: number;
+    zigzagPeriodS?: number;
+    animationStyle?: "smooth" | "trot" | "run";
+  };
 }
 
 const radToMil = (rad: number) => rad * 1000;
 const radToMoa = (rad: number) => (rad * 180 * 60) / Math.PI;
+const DEG_TO_RAD = Math.PI / 180;
 
 function useAnimatedNumber(target: number, speed = 0.22, epsilon = 0.0005) {
   const [value, setValue] = useState(target);
@@ -120,7 +136,8 @@ export function ReticleCanvas({
   focalPlane = "SFP",
   targetImageSrc,
   viewMode = "hold",
-  opticFov
+  opticFov,
+  targetMotion
 }: ReticleProps) {
   const reticleFrameRef = useRef<HTMLDivElement>(null);
   const reticleCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -221,7 +238,7 @@ export function ReticleCanvas({
   const sceneScaleTarget = clampedMagnification / safeMinMagnification;
   const targetScaleInReticle =
     focalPlane === "SFP" ? clampedMagnification / Math.max(maxMagnification, safeMinMagnification) : 1;
-  const minTargetHalf = 0.03;
+  const minTargetHalf = 0.01;
   const targetHalfWidth = Math.max((targetWidthUnits * targetScaleInReticle) / 2, minTargetHalf);
   const targetHalfHeight = Math.max((targetHeightUnits * targetScaleInReticle) / 2, minTargetHalf);
   const bullseyeRadius = Math.max(Math.min(targetHalfWidth, targetHalfHeight) * 0.4, 0.08);
@@ -236,8 +253,127 @@ export function ReticleCanvas({
   const combinedAimY = displayHoldY + displayLeadY;
   const aimMarkerXTarget = Math.max(-extent, Math.min(extent, combinedAimX));
   const aimMarkerYTarget = Math.max(-extent, Math.min(extent, -combinedAimY));
-  const targetOffsetXTarget = viewMode === "shift-target" ? -aimMarkerXTarget : 0;
-  const targetOffsetYTarget = viewMode === "shift-target" ? -aimMarkerYTarget : 0;
+  const motionPattern = targetMotion?.pattern ?? "straight";
+  const motionStyle = targetMotion?.animationStyle ?? "smooth";
+  const motionSpeed = targetMotion?.speedMps ?? 0;
+  const motionDirection = targetMotion?.directionDeg ?? 0;
+  const motionVerticalSpeed = targetMotion?.verticalSpeedMps ?? 0;
+  const [motionTime, setMotionTime] = useState(0);
+
+  useEffect(() => {
+    if (!targetMotion?.enabled) return;
+    let frame = 0;
+    const start = performance.now();
+    const tick = (now: number) => {
+      const t = (now - start) / 1000;
+      setMotionTime(t % 8);
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [targetMotion?.enabled]);
+
+  const computeArcDisplacement = (
+    timeS: number,
+    speed: number,
+    directionDeg: number,
+    radiusM: number,
+    turnDir: "left" | "right"
+  ) => {
+    const theta0 = directionDeg * DEG_TO_RAD;
+    const vRad = speed * Math.cos(theta0);
+    const vLat = speed * Math.sin(theta0);
+    const safeRadius = Math.max(radiusM, 1);
+    const turnSign = turnDir === "right" ? 1 : -1;
+    const w = turnSign * speed / safeRadius;
+    if (Math.abs(w) < 1e-6) {
+      return { radial: vRad * timeS, lateral: vLat * timeS };
+    }
+    const wt = w * timeS;
+    const sin = Math.sin(wt);
+    const cos = Math.cos(wt);
+    const radial = (vRad * sin + vLat * (cos - 1)) / w;
+    const lateral = (vRad * (1 - cos) + vLat * sin) / w;
+    return { radial, lateral };
+  };
+
+  const computeZigzagDisplacement = (
+    timeS: number,
+    speed: number,
+    directionDeg: number,
+    zigzagAngleDeg: number,
+    periodS: number
+  ) => {
+    const baseTheta = directionDeg * DEG_TO_RAD;
+    const zigzagAngle = Math.max(0, Math.min(zigzagAngleDeg, 75)) * DEG_TO_RAD;
+    const halfPeriod = Math.max(periodS, 0.4) / 2;
+    let remaining = timeS;
+    let sign = 1;
+    let radial = 0;
+    let lateral = 0;
+    while (remaining > 1e-6) {
+      const dtSeg = Math.min(remaining, halfPeriod);
+      const theta = baseTheta + sign * zigzagAngle;
+      const vRad = speed * Math.cos(theta);
+      const vLat = speed * Math.sin(theta);
+      radial += vRad * dtSeg;
+      lateral += vLat * dtSeg;
+      remaining -= dtSeg;
+      sign *= -1;
+    }
+    return { radial, lateral };
+  };
+
+  const computeMotionDisplacement = (timeS: number) => {
+    if (!targetMotion?.enabled) return { radial: 0, lateral: 0, vertical: 0 };
+    if (motionPattern === "arc") {
+      const disp = computeArcDisplacement(
+        timeS,
+        motionSpeed,
+        motionDirection,
+        targetMotion.arcRadiusM ?? 60,
+        targetMotion.arcDirection === "left" ? "left" : "right"
+      );
+      return { ...disp, vertical: motionVerticalSpeed * timeS };
+    }
+    if (motionPattern === "zigzag") {
+      const disp = computeZigzagDisplacement(
+        timeS,
+        motionSpeed,
+        motionDirection,
+        targetMotion.zigzagAngleDeg ?? 25,
+        targetMotion.zigzagPeriodS ?? 2.4
+      );
+      return { ...disp, vertical: motionVerticalSpeed * timeS };
+    }
+    const theta = motionDirection * DEG_TO_RAD;
+    return {
+      radial: motionSpeed * Math.cos(theta) * timeS,
+      lateral: motionSpeed * Math.sin(theta) * timeS,
+      vertical: motionVerticalSpeed * timeS
+    };
+  };
+
+  const motionDisp = computeMotionDisplacement(motionTime);
+  const motionOffsetX =
+    targetMotion?.enabled && distanceMeters > 0
+      ? (unit === "MOA" ? radToMoa(Math.atan2(motionDisp.lateral, distanceMeters)) : radToMil(Math.atan2(motionDisp.lateral, distanceMeters)))
+      : 0;
+  const motionOffsetY =
+    targetMotion?.enabled && distanceMeters > 0
+      ? -(unit === "MOA" ? radToMoa(Math.atan2(motionDisp.vertical, distanceMeters)) : radToMil(Math.atan2(motionDisp.vertical, distanceMeters)))
+      : 0;
+
+  const gaitHz = motionStyle === "run" ? 5.5 : motionStyle === "trot" ? 3.5 : 2.0;
+  const gaitAmp = motionStyle === "run" ? 0.12 : motionStyle === "trot" ? 0.08 : 0.04;
+  const gaitPhase = motionTime * gaitHz * Math.PI * 2;
+  const gaitYOffset = targetMotion?.enabled ? Math.sin(gaitPhase) * targetHalfHeight * gaitAmp : 0;
+  const gaitXOffset = targetMotion?.enabled ? Math.sin(gaitPhase * 0.5) * targetHalfWidth * gaitAmp * 0.4 : 0;
+
+  const targetOffsetXTarget =
+    (viewMode === "shift-target" ? -aimMarkerXTarget : 0) + motionOffsetX + gaitXOffset;
+  const targetOffsetYTarget =
+    (viewMode === "shift-target" ? -aimMarkerYTarget : 0) + motionOffsetY + gaitYOffset;
   const reticleScaleTarget = focalPlane === "FFP" ? sceneScaleTarget : 1;
   const animatedSceneScale = useAnimatedNumber(sceneScaleTarget);
   const animatedReticleScale = useAnimatedNumber(reticleScaleTarget);
@@ -440,6 +576,66 @@ export function ReticleCanvas({
             points={`${bodyRx * 0.95},${-bodyRy * 0.3} ${bodyRx * 1.15},${-bodyRy * 0.05} ${bodyRx * 0.95},${bodyRy * 0.1}`}
             fill="#111827"
           />
+        </>
+      );
+    }
+
+    if (targetStyle === "animal-wolf") {
+      const bodyRx = targetHalfWidth * 0.66;
+      const bodyRy = targetHalfHeight * 0.24;
+      return (
+        <>
+          <ellipse cx={0} cy={0} rx={bodyRx} ry={bodyRy} fill="#111827" />
+          <circle cx={bodyRx * 0.85} cy={-bodyRy * 0.35} r={bodyRy * 0.28} fill="#111827" />
+          <polygon
+            points={`${bodyRx * 0.95},${-bodyRy * 0.3} ${bodyRx * 1.2},${-bodyRy * 0.05} ${bodyRx * 0.95},${bodyRy * 0.08}`}
+            fill="#111827"
+          />
+          <polygon
+            points={`${-bodyRx * 0.95},${bodyRy * 0.15} ${-bodyRx * 1.3},${-bodyRy * 0.2} ${-bodyRx * 1.05},${bodyRy * 0.55}`}
+            fill="#111827"
+          />
+          <rect x={-bodyRx * 0.48} y={bodyRy * 0.55} width={bodyRx * 0.16} height={targetHalfHeight * 0.4} fill="#0f172a" />
+          <rect x={-bodyRx * 0.1} y={bodyRy * 0.55} width={bodyRx * 0.16} height={targetHalfHeight * 0.4} fill="#0f172a" />
+          <rect x={bodyRx * 0.2} y={bodyRy * 0.55} width={bodyRx * 0.16} height={targetHalfHeight * 0.4} fill="#0f172a" />
+          <rect x={bodyRx * 0.5} y={bodyRy * 0.55} width={bodyRx * 0.16} height={targetHalfHeight * 0.4} fill="#0f172a" />
+        </>
+      );
+    }
+
+    if (targetStyle === "animal-roe") {
+      const bodyRx = targetHalfWidth * 0.58;
+      const bodyRy = targetHalfHeight * 0.24;
+      return (
+        <>
+          <ellipse cx={0} cy={0} rx={bodyRx} ry={bodyRy} fill="#111827" />
+          <rect x={bodyRx * 0.35} y={-bodyRy * 0.6} width={bodyRx * 0.32} height={bodyRy * 0.5} fill="#111827" />
+          <circle cx={bodyRx * 0.88} cy={-bodyRy * 0.58} r={bodyRy * 0.28} fill="#111827" />
+          <rect x={-bodyRx * 0.45} y={bodyRy * 0.55} width={bodyRx * 0.14} height={targetHalfHeight * 0.42} fill="#0f172a" />
+          <rect x={-bodyRx * 0.1} y={bodyRy * 0.55} width={bodyRx * 0.14} height={targetHalfHeight * 0.42} fill="#0f172a" />
+          <rect x={bodyRx * 0.2} y={bodyRy * 0.55} width={bodyRx * 0.14} height={targetHalfHeight * 0.42} fill="#0f172a" />
+          <rect x={bodyRx * 0.48} y={bodyRy * 0.55} width={bodyRx * 0.14} height={targetHalfHeight * 0.42} fill="#0f172a" />
+          <path
+            d={`M ${bodyRx * 0.88} ${-bodyRy * 0.95} l ${bodyRx * 0.14} ${-bodyRy * 0.3}`}
+            stroke="#111827"
+            strokeWidth={0.1}
+            strokeLinecap="round"
+          />
+        </>
+      );
+    }
+
+    if (targetStyle === "animal-human") {
+      const bodyW = targetHalfWidth * 0.35;
+      const bodyH = targetHalfHeight * 0.55;
+      return (
+        <>
+          <circle cx={0} cy={-bodyH * 0.85} r={bodyW * 0.35} fill="#111827" />
+          <rect x={-bodyW * 0.45} y={-bodyH * 0.7} width={bodyW * 0.9} height={bodyH} fill="#111827" />
+          <rect x={-bodyW * 0.75} y={-bodyH * 0.55} width={bodyW * 0.3} height={bodyH * 0.45} fill="#111827" />
+          <rect x={bodyW * 0.45} y={-bodyH * 0.55} width={bodyW * 0.3} height={bodyH * 0.45} fill="#111827" />
+          <rect x={-bodyW * 0.45} y={bodyH * 0.3} width={bodyW * 0.3} height={targetHalfHeight * 0.6} fill="#0f172a" />
+          <rect x={bodyW * 0.15} y={bodyH * 0.3} width={bodyW * 0.3} height={targetHalfHeight * 0.6} fill="#0f172a" />
         </>
       );
     }
