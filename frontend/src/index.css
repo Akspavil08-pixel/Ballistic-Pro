@@ -68,6 +68,7 @@ option {
 .app-body {
   flex: 1;
   overflow: hidden;
+  min-height: 0;
 }
 
 .dashboard-grid {
@@ -75,6 +76,7 @@ option {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
   gap: 16px;
+  min-height: 0;
 }
 
 .panel {
@@ -233,27 +235,32 @@ option {
   letter-spacing: 0.08em;
 }
 
-@media (max-width: 1024px) {
-  body {
-    overflow: hidden;
-  }
+  @media (max-width: 1024px) {
+    body {
+      overflow: hidden;
+    }
 
-  .app-shell {
-    height: 100dvh;
-  }
+    .app-shell {
+      height: 100svh;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .app-header {
+      padding-top: env(safe-area-inset-top);
+    }
 
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
 
-  .app-body {
-    overflow: hidden;
-    padding-bottom: 72px;
-  }
+    .app-body {
+      overflow: hidden;
+      padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    }
 
-  .panel {
-    min-height: auto;
-  }
+    .panel {
+      min-height: 0;
+    }
 
   .panel-content {
     overflow: auto;
@@ -311,16 +318,16 @@ option {
     display: none;
   }
 
-  .mobile-bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 30;
-    display: flex;
-    gap: 6px;
-    padding: 10px 12px;
-    background: rgba(10, 12, 15, 0.92);
+    .mobile-bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 30;
+      display: flex;
+      gap: 6px;
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      background: rgba(10, 12, 15, 0.92);
     border-top: 1px solid #232833;
     backdrop-filter: blur(8px);
     justify-content: center;
