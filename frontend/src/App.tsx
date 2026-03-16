@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Field } from "./components/Field";
 import { SelectField } from "./components/SelectField";
 import { SectionCard } from "./components/SectionCard";
@@ -364,9 +364,11 @@ export default function App() {
   const [training, setTraining] = useState(true);
   const [activeSection, setActiveSection] = useState<"weapon" | "ammo" | "optic" | "weather" | "geometry">("weapon");
   const [rightTab, setRightTab] = useState<"results" | "reticle" | "graphs" | "table">("results");
+  const [mobilePane, setMobilePane] = useState<"input" | "output">("input");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const isPro = settings.mode === "pro";
 
@@ -421,6 +423,8 @@ export default function App() {
       const data = await solveBallistics(payload);
       setResult(data);
       localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+      setRightTab("results");
+      setMobilePane("output");
     } catch (err: any) {
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
@@ -698,7 +702,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen app-shell">
+    <div className="min-h-screen app-shell" data-mobile-pane={mobilePane}>
       <div className="app-header">
         <div className="mx-auto mobile-shell px-4 py-4 flex flex-col gap-3">
           <div>
@@ -729,25 +733,42 @@ export default function App() {
           </div>
           <div className="segment-bar">
             {[
-              { id: "weapon", label: "Оружие" },
-              { id: "ammo", label: "Патрон" },
-              { id: "optic", label: "Прицел" },
-              { id: "weather", label: "Погода" },
-              { id: "geometry", label: "Дистанция" }
+              { id: "weapon", label: "Оружие", icon: <TargetIcon className="h-4 w-4" /> },
+              { id: "ammo", label: "Патрон", icon: <BulletIcon className="h-4 w-4" /> },
+              { id: "optic", label: "Прицел", icon: <ScopeIcon className="h-4 w-4" /> },
+              { id: "weather", label: "Погода", icon: <WeatherIcon className="h-4 w-4" /> },
+              { id: "geometry", label: "Дистанция", icon: <DistanceIcon className="h-4 w-4" /> }
             ].map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => setActiveSection(item.id as typeof activeSection)}
-                className={`segment-pill ${activeSection === item.id ? "active" : ""}`}
+                className={`segment-pill segment-pill-icon ${activeSection === item.id ? "active" : ""}`}
               >
-                {item.label}
+                <span className="segment-icon">{item.icon}</span>
+                <span className="segment-label">{item.label}</span>
               </button>
             ))}
           </div>
         </div>
       </div>
       <div className="app-body mx-auto desktop-shell px-4 py-4">
+        <div className="mobile-toggle-bar mobile-only">
+          <button
+            type="button"
+            onClick={() => setMobilePane("input")}
+            className={`segment-pill ${mobilePane === "input" ? "active" : ""}`}
+          >
+            Ввод данных
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobilePane("output")}
+            className={`segment-pill ${mobilePane === "output" ? "active" : ""}`}
+          >
+            Вывод
+          </button>
+        </div>
         <div className="dashboard-grid">
           <div className="panel left-panel">
             {training ? (
@@ -1396,9 +1417,31 @@ export default function App() {
             </div>
           </div>
 
-          <div className="panel right-panel">
+          <div
+            className="panel right-panel"
+            onTouchStart={(event) => {
+              const touch = event.touches[0];
+              if (!touch) return;
+              touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+            }}
+            onTouchEnd={(event) => {
+              const touch = event.changedTouches[0];
+              if (!touch || !touchStartRef.current) return;
+              const dx = touch.clientX - touchStartRef.current.x;
+              const dy = touch.clientY - touchStartRef.current.y;
+              touchStartRef.current = null;
+              if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+              const order: Array<typeof rightTab> = ["results", "reticle", "graphs", "table"];
+              const currentIndex = order.indexOf(rightTab);
+              if (currentIndex === -1) return;
+              const nextIndex = dx < 0 ? Math.min(order.length - 1, currentIndex + 1) : Math.max(0, currentIndex - 1);
+              if (nextIndex !== currentIndex) {
+                setRightTab(order[nextIndex]);
+              }
+            }}
+          >
             <div className="panel-toolbar">
-              <div className="segment-bar">
+              <div className="segment-bar desktop-only">
                 {[
                   { id: "results", label: "Результаты" },
                   { id: "reticle", label: "Прицел" },
@@ -1759,6 +1802,60 @@ export default function App() {
         <footer className="mt-4 text-xs text-slate-500">
           Ballistic Pro — PWA с офлайн режимом, расчетами RK4 и поддержкой G1/G7.
         </footer>
+      </div>
+      <div className="mobile-bottom-nav mobile-only">
+        <button
+          type="button"
+          className={`nav-item ${mobilePane === "input" ? "active" : ""}`}
+          onClick={() => setMobilePane("input")}
+        >
+          <TargetIcon className="h-5 w-5" />
+          <span>Ввод</span>
+        </button>
+        <button
+          type="button"
+          className={`nav-item ${mobilePane === "output" && rightTab === "results" ? "active" : ""}`}
+          onClick={() => {
+            setMobilePane("output");
+            setRightTab("results");
+          }}
+        >
+          <ResultIcon className="h-5 w-5" />
+          <span>Результ</span>
+        </button>
+        <button
+          type="button"
+          className={`nav-item ${mobilePane === "output" && rightTab === "reticle" ? "active" : ""}`}
+          onClick={() => {
+            setMobilePane("output");
+            setRightTab("reticle");
+          }}
+        >
+          <ScopeIcon className="h-5 w-5" />
+          <span>Прицел</span>
+        </button>
+        <button
+          type="button"
+          className={`nav-item ${mobilePane === "output" && rightTab === "graphs" ? "active" : ""}`}
+          onClick={() => {
+            setMobilePane("output");
+            setRightTab("graphs");
+          }}
+        >
+          <SettingsIcon className="h-5 w-5" />
+          <span>График</span>
+        </button>
+        <button
+          type="button"
+          className={`nav-item ${mobilePane === "output" && rightTab === "table" ? "active" : ""}`}
+          onClick={() => {
+            setMobilePane("output");
+            setRightTab("table");
+          }}
+        >
+          <DistanceIcon className="h-5 w-5" />
+          <span>Табл</span>
+        </button>
       </div>
     </div>
   );
