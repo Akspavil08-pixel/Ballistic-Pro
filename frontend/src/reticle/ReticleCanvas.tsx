@@ -72,7 +72,6 @@ interface ReticleProps {
 
 const radToMil = (rad: number) => rad * 1000;
 const radToMoa = (rad: number) => (rad * 180 * 60) / Math.PI;
-const DEG_TO_RAD = Math.PI / 180;
 
 function useAnimatedNumber(target: number, speed = 0.22, epsilon = 0.0005) {
   const [value, setValue] = useState(target);
@@ -253,127 +252,8 @@ export function ReticleCanvas({
   const combinedAimY = displayHoldY + displayLeadY;
   const aimMarkerXTarget = Math.max(-extent, Math.min(extent, combinedAimX));
   const aimMarkerYTarget = Math.max(-extent, Math.min(extent, -combinedAimY));
-  const motionPattern = targetMotion?.pattern ?? "straight";
-  const motionStyle = targetMotion?.animationStyle ?? "smooth";
-  const motionSpeed = targetMotion?.speedMps ?? 0;
-  const motionDirection = targetMotion?.directionDeg ?? 0;
-  const motionVerticalSpeed = targetMotion?.verticalSpeedMps ?? 0;
-  const [motionTime, setMotionTime] = useState(0);
-
-  useEffect(() => {
-    if (!targetMotion?.enabled) return;
-    let frame = 0;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const t = (now - start) / 1000;
-      setMotionTime(t % 8);
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [targetMotion?.enabled]);
-
-  const computeArcDisplacement = (
-    timeS: number,
-    speed: number,
-    directionDeg: number,
-    radiusM: number,
-    turnDir: "left" | "right"
-  ) => {
-    const theta0 = directionDeg * DEG_TO_RAD;
-    const vRad = speed * Math.cos(theta0);
-    const vLat = speed * Math.sin(theta0);
-    const safeRadius = Math.max(radiusM, 1);
-    const turnSign = turnDir === "right" ? 1 : -1;
-    const w = turnSign * speed / safeRadius;
-    if (Math.abs(w) < 1e-6) {
-      return { radial: vRad * timeS, lateral: vLat * timeS };
-    }
-    const wt = w * timeS;
-    const sin = Math.sin(wt);
-    const cos = Math.cos(wt);
-    const radial = (vRad * sin + vLat * (cos - 1)) / w;
-    const lateral = (vRad * (1 - cos) + vLat * sin) / w;
-    return { radial, lateral };
-  };
-
-  const computeZigzagDisplacement = (
-    timeS: number,
-    speed: number,
-    directionDeg: number,
-    zigzagAngleDeg: number,
-    periodS: number
-  ) => {
-    const baseTheta = directionDeg * DEG_TO_RAD;
-    const zigzagAngle = Math.max(0, Math.min(zigzagAngleDeg, 75)) * DEG_TO_RAD;
-    const halfPeriod = Math.max(periodS, 0.4) / 2;
-    let remaining = timeS;
-    let sign = 1;
-    let radial = 0;
-    let lateral = 0;
-    while (remaining > 1e-6) {
-      const dtSeg = Math.min(remaining, halfPeriod);
-      const theta = baseTheta + sign * zigzagAngle;
-      const vRad = speed * Math.cos(theta);
-      const vLat = speed * Math.sin(theta);
-      radial += vRad * dtSeg;
-      lateral += vLat * dtSeg;
-      remaining -= dtSeg;
-      sign *= -1;
-    }
-    return { radial, lateral };
-  };
-
-  const computeMotionDisplacement = (timeS: number) => {
-    if (!targetMotion?.enabled) return { radial: 0, lateral: 0, vertical: 0 };
-    if (motionPattern === "arc") {
-      const disp = computeArcDisplacement(
-        timeS,
-        motionSpeed,
-        motionDirection,
-        targetMotion.arcRadiusM ?? 60,
-        targetMotion.arcDirection === "left" ? "left" : "right"
-      );
-      return { ...disp, vertical: motionVerticalSpeed * timeS };
-    }
-    if (motionPattern === "zigzag") {
-      const disp = computeZigzagDisplacement(
-        timeS,
-        motionSpeed,
-        motionDirection,
-        targetMotion.zigzagAngleDeg ?? 25,
-        targetMotion.zigzagPeriodS ?? 2.4
-      );
-      return { ...disp, vertical: motionVerticalSpeed * timeS };
-    }
-    const theta = motionDirection * DEG_TO_RAD;
-    return {
-      radial: motionSpeed * Math.cos(theta) * timeS,
-      lateral: motionSpeed * Math.sin(theta) * timeS,
-      vertical: motionVerticalSpeed * timeS
-    };
-  };
-
-  const motionDisp = computeMotionDisplacement(motionTime);
-  const motionOffsetX =
-    targetMotion?.enabled && distanceMeters > 0
-      ? (unit === "MOA" ? radToMoa(Math.atan2(motionDisp.lateral, distanceMeters)) : radToMil(Math.atan2(motionDisp.lateral, distanceMeters)))
-      : 0;
-  const motionOffsetY =
-    targetMotion?.enabled && distanceMeters > 0
-      ? -(unit === "MOA" ? radToMoa(Math.atan2(motionDisp.vertical, distanceMeters)) : radToMil(Math.atan2(motionDisp.vertical, distanceMeters)))
-      : 0;
-
-  const gaitHz = motionStyle === "run" ? 5.5 : motionStyle === "trot" ? 3.5 : 2.0;
-  const gaitAmp = motionStyle === "run" ? 0.12 : motionStyle === "trot" ? 0.08 : 0.04;
-  const gaitPhase = motionTime * gaitHz * Math.PI * 2;
-  const gaitYOffset = targetMotion?.enabled ? Math.sin(gaitPhase) * targetHalfHeight * gaitAmp : 0;
-  const gaitXOffset = targetMotion?.enabled ? Math.sin(gaitPhase * 0.5) * targetHalfWidth * gaitAmp * 0.4 : 0;
-
-  const targetOffsetXTarget =
-    (viewMode === "shift-target" ? -aimMarkerXTarget : 0) + motionOffsetX + gaitXOffset;
-  const targetOffsetYTarget =
-    (viewMode === "shift-target" ? -aimMarkerYTarget : 0) + motionOffsetY + gaitYOffset;
+  const targetOffsetXTarget = viewMode === "shift-target" ? -aimMarkerXTarget : 0;
+  const targetOffsetYTarget = viewMode === "shift-target" ? -aimMarkerYTarget : 0;
   const reticleScaleTarget = focalPlane === "FFP" ? sceneScaleTarget : 1;
   const animatedSceneScale = useAnimatedNumber(sceneScaleTarget);
   const animatedReticleScale = useAnimatedNumber(reticleScaleTarget);
