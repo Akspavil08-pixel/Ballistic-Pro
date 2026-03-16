@@ -7,6 +7,7 @@ import { StatCard } from "./components/StatCard";
 import { TrajectoryCharts } from "./graphs/TrajectoryCharts";
 import { ReticleCanvas } from "./reticle/ReticleCanvas";
 import { reticleProfiles } from "./reticle/reticleProfiles";
+import { WindDial } from "./components/WindDial";
 import {
   BulletIcon,
   DistanceIcon,
@@ -1087,16 +1088,13 @@ export default function App() {
               step={0.1}
               icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
             />
-            <Field
-              id="wind-dir"
-              label="Направление ветра"
-              tooltipKey="windDirection"
-              value={weather.wind_direction_deg}
-              onChange={(v) => setWeather((w) => ({ ...w, wind_direction_deg: Number(v) }))}
-              unit="°"
-              step={1}
-              icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
-            />
+            <div className="mt-3">
+              <WindDial
+                directionDeg={weather.wind_direction_deg}
+                speedMps={weather.wind_speed_mps}
+                onChange={(value) => setWeather((w) => ({ ...w, wind_direction_deg: value }))}
+              />
+            </div>
               </SectionCard>
             ) : null}
 

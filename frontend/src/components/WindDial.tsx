@@ -1,11 +1,35 @@
+import { useRef, useState } from "react";
+
 interface WindDialProps {
   directionDeg: number;
   speedMps: number;
+  onChange?: (value: number) => void;
 }
 
-export function WindDial({ directionDeg, speedMps }: WindDialProps) {
+export function WindDial({ directionDeg, speedMps, onChange }: WindDialProps) {
   const angle = ((directionDeg % 360) + 360) % 360;
   const speedLabel = Number.isFinite(speedMps) ? speedMps.toFixed(1) : "—";
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const angleFromPointer = (clientX: number, clientY: number) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return angle;
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const dx = clientX - cx;
+    const dy = clientY - cy;
+    const rad = Math.atan2(dx, -dy);
+    const deg = (rad * 180) / Math.PI;
+    return (deg + 360) % 360;
+  };
+
+  const handlePointer = (event: React.PointerEvent) => {
+    if (!onChange) return;
+    const next = angleFromPointer(event.clientX, event.clientY);
+    onChange(Number(next.toFixed(1)));
+  };
 
   const polar = (deg: number, radius: number) => {
     const rad = ((deg - 90) * Math.PI) / 180;
@@ -34,7 +58,21 @@ export function WindDial({ directionDeg, speedMps }: WindDialProps) {
   const wedgeEnd = angle + 10;
 
   return (
-    <div className="wind-dial">
+    <div
+      ref={containerRef}
+      className={`wind-dial ${dragging ? "wind-dial-dragging" : ""}`}
+      onPointerDown={(event) => {
+        setDragging(true);
+        (event.currentTarget as HTMLDivElement).setPointerCapture(event.pointerId);
+        handlePointer(event);
+      }}
+      onPointerMove={(event) => {
+        if (!dragging) return;
+        handlePointer(event);
+      }}
+      onPointerUp={() => setDragging(false)}
+      onPointerLeave={() => setDragging(false)}
+    >
       <svg viewBox="0 0 200 200" className="wind-dial-svg" aria-label="Направление ветра">
         <circle cx="100" cy="100" r="92" fill="#050607" stroke="#2c2f35" strokeWidth="2" />
         <circle cx="100" cy="100" r="86" fill="none" stroke="#101215" strokeWidth="2" />
