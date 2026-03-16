@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface WindDialProps {
   directionDeg: number;
@@ -12,6 +12,20 @@ export function WindDial({ directionDeg, speedMps, onChange }: WindDialProps) {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const prevent = (event: TouchEvent) => {
+      event.preventDefault();
+    };
+    el.addEventListener("touchstart", prevent, { passive: false });
+    el.addEventListener("touchmove", prevent, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", prevent);
+      el.removeEventListener("touchmove", prevent);
+    };
+  }, []);
 
   const angleFromPointer = (clientX: number, clientY: number) => {
     const rect = containerRef.current?.getBoundingClientRect();
