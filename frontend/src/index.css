@@ -32,6 +32,9 @@ option {
 
 .app-shell {
   background: #0f1115;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .app-header {
@@ -41,6 +44,51 @@ option {
 
 .mobile-shell {
   max-width: 520px;
+}
+
+.desktop-shell {
+  max-width: 1200px;
+  width: 100%;
+}
+
+.app-body {
+  flex: 1;
+  overflow: hidden;
+}
+
+.dashboard-grid {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 16px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.panel-content {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .segment-bar {

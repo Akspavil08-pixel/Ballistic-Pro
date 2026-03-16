@@ -363,6 +363,7 @@ export default function App() {
 
   const [training, setTraining] = useState(true);
   const [activeSection, setActiveSection] = useState<"weapon" | "ammo" | "optic" | "weather" | "geometry">("weapon");
+  const [rightTab, setRightTab] = useState<"results" | "reticle" | "graphs" | "table">("results");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any | null>(null);
@@ -746,36 +747,36 @@ export default function App() {
           </div>
         </div>
       </div>
-      <div className="mx-auto mobile-shell px-4 py-4">
+      <div className="app-body mx-auto desktop-shell px-4 py-4">
+        <div className="dashboard-grid">
+          <div className="panel left-panel">
+            {training ? (
+              <div className="rounded-xl border border-slate-700/70 bg-slate-900/80 p-4 shadow-soft">
+                <div className="flex items-center gap-3">
+                  <InfoIcon className="h-6 w-6 text-ocean" />
+                  <h2 className="font-display text-base text-white">Режим обучения</h2>
+                </div>
+                <p className="text-xs text-slate-300 mt-2">
+                  Здесь короткие объяснения. Наведите курсор на ⓘ у параметров, чтобы увидеть подсказку.
+                </p>
+                <div className="grid gap-3 mt-4">
+                  <div className="rounded-lg border border-slate-700/70 bg-slate-900/70 p-3">
+                    <p className="text-xs text-slate-300">BC</p>
+                    <p className="text-xs text-slate-200">Чем выше BC, тем меньше падение и влияние ветра.</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-700/70 bg-slate-900/70 p-3">
+                    <p className="text-xs text-slate-300">MIL / MOA</p>
+                    <p className="text-xs text-slate-200">Угловые единицы поправок. MIL удобен для метрики, MOA часто в дюймах.</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-700/70 bg-slate-900/70 p-3">
+                    <p className="text-xs text-slate-300">Кориолис</p>
+                    <p className="text-xs text-slate-200">Вращение Земли слегка уводит пулю, особенно на больших дистанциях.</p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
-        {training ? (
-          <div className="mt-6 rounded-xl border border-slate-700/70 bg-slate-900/80 p-4 shadow-soft">
-            <div className="flex items-center gap-3">
-              <InfoIcon className="h-6 w-6 text-ocean" />
-              <h2 className="font-display text-base text-white">Режим обучения</h2>
-            </div>
-            <p className="text-xs text-slate-300 mt-2">
-              Здесь короткие объяснения. Наведите курсор на ⓘ у параметров, чтобы увидеть подсказку.
-            </p>
-            <div className="grid gap-3 mt-4 md:grid-cols-3">
-              <div className="rounded-lg border border-slate-700/70 bg-slate-900/70 p-3">
-                <p className="text-xs text-slate-300">BC</p>
-                <p className="text-xs text-slate-200">Чем выше BC, тем меньше падение и влияние ветра.</p>
-              </div>
-              <div className="rounded-lg border border-slate-700/70 bg-slate-900/70 p-3">
-                <p className="text-xs text-slate-300">MIL / MOA</p>
-                <p className="text-xs text-slate-200">Угловые единицы поправок. MIL удобен для метрики, MOA часто в дюймах.</p>
-              </div>
-              <div className="rounded-lg border border-slate-700/70 bg-slate-900/70 p-3">
-                <p className="text-xs text-slate-300">Кориолис</p>
-                <p className="text-xs text-slate-200">Вращение Земли слегка уводит пулю, особенно на больших дистанциях.</p>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <div className="grid gap-4">
+            <div className="panel-content">
             {activeSection === "weapon" ? (
               <SectionCard title="1. Оружие" subtitle="Профиль оружия и параметры ствола">
             <Field
@@ -1083,9 +1084,15 @@ export default function App() {
               label="Скорость ветра"
               tooltipKey="windSpeed"
               value={weather.wind_speed_mps}
-              onChange={(v) => setWeather((w) => ({ ...w, wind_speed_mps: Number(v) }))}
+              onChange={(v) =>
+                setWeather((w) => ({
+                  ...w,
+                  wind_speed_mps: Math.max(0, Number(v))
+                }))
+              }
               unit="м/с"
               step={0.1}
+              min={0}
               icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
             />
             <div className="mt-3">
@@ -1386,9 +1393,38 @@ export default function App() {
             ) : null}
               </SectionCard>
             ) : null}
+            </div>
           </div>
 
-          <div className="grid gap-4">
+          <div className="panel right-panel">
+            <div className="panel-toolbar">
+              <div className="segment-bar">
+                {[
+                  { id: "results", label: "Результаты" },
+                  { id: "reticle", label: "Прицел" },
+                  { id: "graphs", label: "Графики" },
+                  { id: "table", label: "Таблица" }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setRightTab(item.id as typeof rightTab)}
+                    className={`segment-pill ${rightTab === item.id ? "active" : ""}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                className="rounded-full bg-emerald-500/90 px-5 py-2 text-white text-sm shadow-glow"
+                onClick={handleCalc}
+              >
+                {loading ? "Расчет..." : "Рассчитать"}
+              </button>
+            </div>
+
+            <div className="panel-content">
+            {rightTab === "results" ? (
             <SectionCard title="6. Результаты" subtitle="Поправки, клики и траектория">
               <div className="grid gap-3 grid-cols-2">
               <StatCard
@@ -1489,7 +1525,9 @@ export default function App() {
               </div>
               {error ? <p className="text-sm text-ember mt-3">{error}</p> : null}
             </SectionCard>
+            ) : null}
 
+            {rightTab === "reticle" ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <ResultIcon className="h-5 w-5 text-ocean" />
@@ -1542,7 +1580,7 @@ export default function App() {
                   </button>
                 </div>
               </div>
-                <ReticleCanvas
+              <ReticleCanvas
                   holdX={horizontalCorrection}
                   leadX={movingTargetData?.leadUnits ?? 0}
                   leadY={movingTargetData?.verticalLeadUnits ?? 0}
@@ -1582,7 +1620,9 @@ export default function App() {
                 opticFov={activeReticle?.opticFov}
               />
             </div>
+            ) : null}
 
+            {rightTab === "graphs" ? (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <SettingsIcon className="h-5 w-5 text-ocean" />
@@ -1602,7 +1642,9 @@ export default function App() {
                 </div>
               )}
             </div>
+            ) : null}
 
+            {rightTab === "table" ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <ResultIcon className="h-5 w-5 text-ocean" />
@@ -1648,8 +1690,9 @@ export default function App() {
                 </table>
               </div>
             </div>
+            ) : null}
 
-            {movingTarget.enabled ? (
+            {rightTab === "table" && movingTarget.enabled ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <ResultIcon className="h-5 w-5 text-ocean" />
@@ -1709,20 +1752,7 @@ export default function App() {
                 </div>
               </div>
             ) : null}
-          </div>
-        </div>
-
-        <div className="sticky-bar">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-xs text-slate-400">
-              Дистанция: {geometry.distance_m} м · {optic.unit}
             </div>
-            <button
-              className="rounded-full bg-emerald-500/90 px-5 py-2 text-white text-sm shadow-glow"
-              onClick={handleCalc}
-            >
-              {loading ? "Расчет..." : "Рассчитать"}
-            </button>
           </div>
         </div>
 
