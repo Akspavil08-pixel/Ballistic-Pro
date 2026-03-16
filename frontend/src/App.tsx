@@ -25,6 +25,93 @@ const moaFromRad = (rad: number) => (rad * 180.0 * 60.0) / Math.PI;
 const CACHE_KEY = "ballistics:last";
 const CM_PER_M = 100;
 const DEFAULT_MAGNIFICATION_RANGE = { min: 3, max: 18 };
+const DEG_TO_RAD = Math.PI / 180;
+
+const targetMotionTypes = [
+  { id: "walk", label: "Человек (шаг ~1.5 м/с)", speed: 1.5 },
+  { id: "run", label: "Человек (бег ~4 м/с)", speed: 4 },
+  { id: "boar", label: "Кабан (рывок ~6 м/с)", speed: 6 },
+  { id: "deer", label: "Олень/лось (галоп ~7 м/с)", speed: 7 },
+  { id: "bear", label: "Медведь (быстро ~5 м/с)", speed: 5 },
+  { id: "fox", label: "Лиса (быстро ~4 м/с)", speed: 4 },
+  { id: "vehicle", label: "Авто медленно ~15 м/с", speed: 15 },
+  { id: "custom", label: "Свой (ввести вручную)", speed: null }
+];
+
+const targetDirectionPresets = [
+  { value: 90, label: "Слева направо (перпендикулярно)" },
+  { value: 270, label: "Справа налево (перпендикулярно)" },
+  { value: 0, label: "От вас (цель уходит)" },
+  { value: 180, label: "К вам (цель приближается)" },
+  { value: 45, label: "Уходит вправо (45°)" },
+  { value: 135, label: "Уходит влево (135°)" },
+  { value: 315, label: "Идёт справа (315°)" },
+  { value: 225, label: "Идёт слева (225°)" }
+];
+
+const motionPatternOptions = [
+  { value: "straight", label: "Прямолинейно" },
+  { value: "arc", label: "Дуга (поворот)" },
+  { value: "zigzag", label: "Зигзаг" }
+];
+
+const motionArcDirections = [
+  { value: "right", label: "Поворот вправо" },
+  { value: "left", label: "Поворот влево" }
+];
+
+const clampDistance = (value: number, max: number) => Math.max(0, Math.min(value, max));
+
+const computeArcDisplacement = (
+  timeS: number,
+  speed: number,
+  directionDeg: number,
+  radiusM: number,
+  turnDir: "left" | "right"
+) => {
+  const theta0 = directionDeg * DEG_TO_RAD;
+  const vRad = speed * Math.cos(theta0);
+  const vLat = speed * Math.sin(theta0);
+  const safeRadius = Math.max(radiusM, 1);
+  const turnSign = turnDir === "right" ? 1 : -1;
+  const w = turnSign * speed / safeRadius;
+  if (Math.abs(w) < 1e-6) {
+    return { radial: vRad * timeS, lateral: vLat * timeS };
+  }
+  const wt = w * timeS;
+  const sin = Math.sin(wt);
+  const cos = Math.cos(wt);
+  const radial = (vRad * sin + vLat * (cos - 1)) / w;
+  const lateral = (vRad * (1 - cos) + vLat * sin) / w;
+  return { radial, lateral };
+};
+
+const computeZigzagDisplacement = (
+  timeS: number,
+  speed: number,
+  directionDeg: number,
+  zigzagAngleDeg: number,
+  periodS: number
+) => {
+  const baseTheta = directionDeg * DEG_TO_RAD;
+  const zigzagAngle = Math.max(0, Math.min(zigzagAngleDeg, 75)) * DEG_TO_RAD;
+  const halfPeriod = Math.max(periodS, 0.4) / 2;
+  let remaining = timeS;
+  let sign = 1;
+  let radial = 0;
+  let lateral = 0;
+  while (remaining > 1e-6) {
+    const dtSeg = Math.min(remaining, halfPeriod);
+    const theta = baseTheta + sign * zigzagAngle;
+    const vRad = speed * Math.cos(theta);
+    const vLat = speed * Math.sin(theta);
+    radial += vRad * dtSeg;
+    lateral += vLat * dtSeg;
+    remaining -= dtSeg;
+    sign *= -1;
+  }
+  return { radial, lateral };
+};
 
 function parseMagnificationRange(label?: string | null) {
   if (!label) return null;
@@ -215,6 +302,18 @@ export default function App() {
   });
 
   const [targetId, setTargetId] = useState(targetModels[0].id);
+  const [movingTarget, setMovingTarget] = useState({
+    enabled: false,
+    type: "walk",
+    speed_mps: 1.5,
+    direction_deg: 90,
+    vertical_speed_mps: 0,
+    pattern: "straight",
+    arc_radius_m: 60,
+    arc_direction: "right",
+    zigzag_angle_deg: 25,
+    zigzag_period_s: 2.4
+  });
 
   const [training, setTraining] = useState(true);
   const [activeSection, setActiveSection] = useState<"weapon" | "ammo" | "optic" | "weather" | "geometry">("weapon");
@@ -311,6 +410,123 @@ export default function App() {
     return best;
   }, [result, geometry.distance_m]);
 
+  const interpolateRow = (distance: number) => {
+    if (!result?.trajectory?.distance_m?.length) return null;
+    const dist = result.trajectory.distance_m as number[];
+    const clampDistance = Math.max(0, Math.min(distance, dist[dist.length - 1]));
+    let idx = dist.findIndex((d) => d >= clampDistance);
+    if (idx === -1) idx = dist.length - 1;
+    if (idx === 0) idx = 1;
+    const d0 = dist[idx - 1];
+    const d1 = dist[idx];
+    const t = d1 === d0 ? 0 : (clampDistance - d0) / (d1 - d0);
+    const lerp = (arr: number[]) => arr[idx - 1] + (arr[idx] - arr[idx - 1]) * t;
+    const drop = lerp(result.trajectory.drop_m);
+    const drift = lerp(result.trajectory.drift_m);
+    const time = lerp(result.trajectory.time_s);
+    const velocity = lerp(result.trajectory.velocity_mps);
+    const energy = lerp(result.trajectory.energy_j);
+    const angleRad = Math.atan2(drop, Math.max(clampDistance, 1e-6));
+    const correction = optic.unit === "MOA" ? moaFromRad(angleRad) : milFromRad(angleRad);
+    return {
+      distance_m: clampDistance,
+      drop_m: drop,
+      drift_m: drift,
+      time_s: time,
+      velocity_mps: velocity,
+      energy_j: energy,
+      correction,
+      holdover: correction
+    };
+  };
+
+  const computeMovingDisplacement = (timeS: number, speed: number, direction: number) => {
+    const pattern = movingTarget.pattern ?? "straight";
+    if (pattern === "arc") {
+      return computeArcDisplacement(
+        timeS,
+        speed,
+        direction,
+        movingTarget.arc_radius_m,
+        movingTarget.arc_direction === "left" ? "left" : "right"
+      );
+    }
+    if (pattern === "zigzag") {
+      return computeZigzagDisplacement(
+        timeS,
+        speed,
+        direction,
+        movingTarget.zigzag_angle_deg,
+        movingTarget.zigzag_period_s
+      );
+    }
+    const theta = direction * DEG_TO_RAD;
+    return { radial: speed * Math.cos(theta) * timeS, lateral: speed * Math.sin(theta) * timeS };
+  };
+
+  const movingTargetData = useMemo(() => {
+    if (!movingTarget.enabled || !currentRow) return null;
+    const speed = Math.max(movingTarget.speed_mps, 0);
+    const direction = movingTarget.direction_deg ?? 0;
+    const baseDistance = geometry.distance_m;
+    const timeBase = currentRow.time_s ?? 0;
+    let displacement = computeMovingDisplacement(timeBase, speed, direction);
+    let adjustedDistance = clampDistance(baseDistance + displacement.radial, settings.max_range_m);
+    let adjustedRow = interpolateRow(adjustedDistance) ?? currentRow;
+    if (adjustedRow?.time_s) {
+      displacement = computeMovingDisplacement(adjustedRow.time_s, speed, direction);
+      adjustedDistance = clampDistance(baseDistance + displacement.radial, settings.max_range_m);
+      adjustedRow = interpolateRow(adjustedDistance) ?? adjustedRow;
+    }
+    const timeUse = adjustedRow?.time_s ?? timeBase;
+    const leadMeters = displacement.lateral;
+    const verticalLeadMeters = (movingTarget.vertical_speed_mps ?? 0) * timeUse;
+    const leadAngleRad = Math.atan2(leadMeters, Math.max(adjustedDistance, 1e-6));
+    const verticalLeadAngleRad = Math.atan2(verticalLeadMeters, Math.max(adjustedDistance, 1e-6));
+    const leadUnits = optic.unit === "MOA" ? moaFromRad(leadAngleRad) : milFromRad(leadAngleRad);
+    const verticalLeadUnits =
+      optic.unit === "MOA" ? moaFromRad(verticalLeadAngleRad) : milFromRad(verticalLeadAngleRad);
+    const leadClicks = optic.click_value ? leadUnits / optic.click_value : 0;
+    const verticalLeadClicks = optic.click_value ? verticalLeadUnits / optic.click_value : 0;
+    const leadLabel =
+      Math.abs(leadUnits) < 1e-4
+        ? "0.0"
+        : `${leadUnits > 0 ? "R" : "L"} ${Math.abs(leadUnits).toFixed(2)} ${optic.unit}`;
+    const verticalLeadLabel =
+      Math.abs(verticalLeadUnits) < 1e-4
+        ? "0.0"
+        : `${verticalLeadUnits > 0 ? "Up" : "Down"} ${Math.abs(verticalLeadUnits).toFixed(2)} ${optic.unit}`;
+    return {
+      leadMeters,
+      leadUnits,
+      leadClicks,
+      leadLabel,
+      verticalLeadMeters,
+      verticalLeadUnits,
+      verticalLeadClicks,
+      verticalLeadLabel,
+      adjustedDistance,
+      adjustedRow,
+      timeUse
+    };
+  }, [
+    movingTarget.enabled,
+    movingTarget.speed_mps,
+    movingTarget.direction_deg,
+    movingTarget.vertical_speed_mps,
+    movingTarget.pattern,
+    movingTarget.arc_radius_m,
+    movingTarget.arc_direction,
+    movingTarget.zigzag_angle_deg,
+    movingTarget.zigzag_period_s,
+    geometry.distance_m,
+    currentRow,
+    result,
+    optic.unit,
+    optic.click_value,
+    settings.max_range_m
+  ]);
+
   const horizontalCorrection = useMemo(() => {
     if (!currentRow) return 0;
     const angleRad = Math.atan2(currentRow.drift_m, Math.max(currentRow.distance_m, 1e-6));
@@ -322,18 +538,20 @@ export default function App() {
     return horizontalCorrection / optic.click_value;
   }, [currentRow, horizontalCorrection, optic.click_value]);
 
+  const effectiveRow = movingTargetData?.adjustedRow ?? currentRow;
+  const effectiveHoldY = (effectiveRow ? effectiveRow.correction : 0) + (movingTargetData?.verticalLeadUnits ?? 0);
   const elevationClicks = useMemo(() => {
-    if (!currentRow || !optic.click_value) return 0;
-    return currentRow.correction / optic.click_value;
-  }, [currentRow, optic.click_value]);
+    if (!effectiveRow || !optic.click_value) return 0;
+    return effectiveRow.correction / optic.click_value;
+  }, [effectiveRow, optic.click_value]);
 
   const elevationClickLabel = useMemo(() => {
-    if (!currentRow) return "—";
+    if (!effectiveRow) return "—";
     const absClicks = Math.abs(elevationClicks).toFixed(1);
     if (elevationClicks > 0) return `U ${absClicks}`;
     if (elevationClicks < 0) return `D ${absClicks}`;
     return "0.0";
-  }, [currentRow, elevationClicks]);
+  }, [effectiveRow, elevationClicks]);
 
   const windClickLabel = useMemo(() => {
     if (!currentRow) return "—";
@@ -352,6 +570,68 @@ export default function App() {
     if (!result?.table) return [];
     return result.table.filter((row: any) => row.distance_m % 100 === 0 && row.distance_m > 0);
   }, [result]);
+
+  const computeMovingLeadForDistance = (distance: number) => {
+    if (!movingTarget.enabled) return null;
+    const baseRow = interpolateRow(distance);
+    if (!baseRow) return null;
+    const speed = Math.max(movingTarget.speed_mps, 0);
+    const direction = movingTarget.direction_deg ?? 0;
+    let displacement = computeMovingDisplacement(baseRow.time_s ?? 0, speed, direction);
+    let adjustedDistance = clampDistance(distance + displacement.radial, settings.max_range_m);
+    let adjustedRow = interpolateRow(adjustedDistance) ?? baseRow;
+    if (adjustedRow?.time_s) {
+      displacement = computeMovingDisplacement(adjustedRow.time_s, speed, direction);
+      adjustedDistance = clampDistance(distance + displacement.radial, settings.max_range_m);
+      adjustedRow = interpolateRow(adjustedDistance) ?? adjustedRow;
+    }
+    const timeUse = adjustedRow?.time_s ?? baseRow.time_s ?? 0;
+    const leadMeters = displacement.lateral;
+    const verticalLeadMeters = (movingTarget.vertical_speed_mps ?? 0) * timeUse;
+    const leadAngleRad = Math.atan2(leadMeters, Math.max(adjustedDistance, 1e-6));
+    const verticalLeadAngleRad = Math.atan2(verticalLeadMeters, Math.max(adjustedDistance, 1e-6));
+    const leadUnits = optic.unit === "MOA" ? moaFromRad(leadAngleRad) : milFromRad(leadAngleRad);
+    const verticalLeadUnits =
+      optic.unit === "MOA" ? moaFromRad(verticalLeadAngleRad) : milFromRad(verticalLeadAngleRad);
+    const leadClicks = optic.click_value ? leadUnits / optic.click_value : 0;
+    const verticalLeadClicks = optic.click_value ? verticalLeadUnits / optic.click_value : 0;
+    return {
+      distance_m: distance,
+      leadUnits,
+      verticalLeadUnits,
+      leadClicks,
+      verticalLeadClicks,
+      leadMeters,
+      verticalLeadMeters,
+      adjustedDistance,
+      timeUse
+    };
+  };
+
+  const movingLeadRows = useMemo(() => {
+    if (!movingTarget.enabled || !result?.trajectory) return [];
+    const rows: any[] = [];
+    const max = Math.min(settings.max_range_m ?? 1000, 1500);
+    for (let d = 100; d <= max; d += 100) {
+      const leadRow = computeMovingLeadForDistance(d);
+      if (leadRow) rows.push(leadRow);
+    }
+    return rows;
+  }, [
+    movingTarget.enabled,
+    movingTarget.speed_mps,
+    movingTarget.direction_deg,
+    movingTarget.vertical_speed_mps,
+    movingTarget.pattern,
+    movingTarget.arc_radius_m,
+    movingTarget.arc_direction,
+    movingTarget.zigzag_angle_deg,
+    movingTarget.zigzag_period_s,
+    result,
+    optic.unit,
+    optic.click_value,
+    settings.max_range_m
+  ]);
 
   const windClicksForRow = (row: any) => {
     if (!row || !optic.click_value) return 0;
@@ -803,6 +1083,137 @@ export default function App() {
               step={0.1}
               icon={<IconWrapper><DistanceIcon className="h-5 w-5" /></IconWrapper>}
             />
+            <div className="mt-2">
+              <Toggle
+                label="Движущаяся цель"
+                checked={movingTarget.enabled}
+                onChange={(value) => setMovingTarget((m) => ({ ...m, enabled: value }))}
+              />
+            </div>
+            {movingTarget.enabled ? (
+              <div className="mt-3 grid gap-3">
+                <SelectField
+                  id="moving-target-type"
+                  label="Тип цели"
+                  tooltipKey="target"
+                  value={movingTarget.type}
+                  onChange={(v) => {
+                    const nextType = v;
+                    const preset = targetMotionTypes.find((item) => item.id === nextType);
+                    setMovingTarget((m) => ({
+                      ...m,
+                      type: nextType,
+                      speed_mps: preset?.speed ?? m.speed_mps
+                    }));
+                  }}
+                  options={targetMotionTypes.map((item) => ({ value: item.id, label: item.label }))}
+                  icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                />
+                <Field
+                  id="moving-target-speed"
+                  label="Скорость цели"
+                  tooltipKey="target"
+                  value={movingTarget.speed_mps}
+                  onChange={(v) => setMovingTarget((m) => ({ ...m, speed_mps: Number(v), type: "custom" }))}
+                  unit="м/с"
+                  step={0.1}
+                  icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                />
+                <Field
+                  id="moving-target-vertical-speed"
+                  label="Вертикальная скорость"
+                  tooltipKey="target"
+                  value={movingTarget.vertical_speed_mps}
+                  onChange={(v) => setMovingTarget((m) => ({ ...m, vertical_speed_mps: Number(v) }))}
+                  unit="м/с"
+                  step={0.1}
+                  icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                />
+                <SelectField
+                  id="moving-target-direction"
+                  label="Направление движения"
+                  tooltipKey="target"
+                  value={String(movingTarget.direction_deg)}
+                  onChange={(v) => setMovingTarget((m) => ({ ...m, direction_deg: Number(v) }))}
+                  options={targetDirectionPresets.map((item) => ({ value: String(item.value), label: item.label }))}
+                  icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                />
+                <Field
+                  id="moving-target-direction-custom"
+                  label="Угол вручную"
+                  tooltipKey="target"
+                  value={movingTarget.direction_deg}
+                  onChange={(v) => setMovingTarget((m) => ({ ...m, direction_deg: Number(v) }))}
+                  unit="°"
+                  step={1}
+                  icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                />
+                <SelectField
+                  id="moving-target-pattern"
+                  label="Траектория цели"
+                  tooltipKey="target"
+                  value={movingTarget.pattern}
+                  onChange={(v) => setMovingTarget((m) => ({ ...m, pattern: v }))}
+                  options={motionPatternOptions}
+                  icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                />
+                {movingTarget.pattern === "arc" ? (
+                  <>
+                    <Field
+                      id="moving-target-arc-radius"
+                      label="Радиус поворота"
+                      tooltipKey="target"
+                      value={movingTarget.arc_radius_m}
+                      onChange={(v) => setMovingTarget((m) => ({ ...m, arc_radius_m: Number(v) }))}
+                      unit="м"
+                      step={1}
+                      icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                    />
+                    <SelectField
+                      id="moving-target-arc-direction"
+                      label="Направление поворота"
+                      tooltipKey="target"
+                      value={movingTarget.arc_direction}
+                      onChange={(v) => setMovingTarget((m) => ({ ...m, arc_direction: v }))}
+                      options={motionArcDirections}
+                      icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                    />
+                  </>
+                ) : null}
+                {movingTarget.pattern === "zigzag" ? (
+                  <>
+                    <Field
+                      id="moving-target-zigzag-angle"
+                      label="Угол зигзага"
+                      tooltipKey="target"
+                      value={movingTarget.zigzag_angle_deg}
+                      onChange={(v) => setMovingTarget((m) => ({ ...m, zigzag_angle_deg: Number(v) }))}
+                      unit="°"
+                      step={1}
+                      icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                    />
+                    <Field
+                      id="moving-target-zigzag-period"
+                      label="Период зигзага"
+                      tooltipKey="target"
+                      value={movingTarget.zigzag_period_s}
+                      onChange={(v) => setMovingTarget((m) => ({ ...m, zigzag_period_s: Number(v) }))}
+                      unit="с"
+                      step={0.1}
+                      icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
+                    />
+                  </>
+                ) : null}
+                {movingTargetData ? (
+                  <div className="rounded-lg border border-slate-700/70 bg-slate-900/70 p-3 text-xs text-slate-300">
+                    <p className="font-semibold text-white">Расчет упреждения</p>
+                    <p className="mt-1">Упреждение: {movingTargetData.leadLabel}</p>
+                    <p className="mt-1">Упреждение по высоте: {movingTargetData.verticalLeadLabel}</p>
+                    <p className="mt-1">Эффективная дистанция: {movingTargetData.adjustedDistance.toFixed(0)} м</p>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
             {isPro ? (
               <>
                 <Field
@@ -866,7 +1277,7 @@ export default function App() {
               <div className="grid gap-3 grid-cols-2">
               <StatCard
                 label="Вертикальная поправка"
-                value={currentRow ? `${currentRow.correction.toFixed(2)} ${optic.unit}` : "—"}
+                value={effectiveRow ? `${effectiveRow.correction.toFixed(2)} ${optic.unit}` : "—"}
                 highlight
               />
               <StatCard
@@ -887,20 +1298,64 @@ export default function App() {
               />
               <StatCard
                 label="Скорость"
-                value={currentRow ? `${currentRow.velocity_mps.toFixed(1)} м/с` : "—"}
+                value={effectiveRow ? `${effectiveRow.velocity_mps.toFixed(1)} м/с` : "—"}
               />
               <StatCard
                 label="Энергия"
-                value={currentRow ? `${currentRow.energy_j.toFixed(0)} Дж` : "—"}
+                value={effectiveRow ? `${effectiveRow.energy_j.toFixed(0)} Дж` : "—"}
               />
               <StatCard
                 label="Падение"
-                value={currentRow ? `${(currentRow.drop_m * CM_PER_M).toFixed(1)} см` : "—"}
+                value={effectiveRow ? `${(effectiveRow.drop_m * CM_PER_M).toFixed(1)} см` : "—"}
               />
               <StatCard
                 label="Снос ветром"
-                value={currentRow ? `${(currentRow.drift_m * CM_PER_M).toFixed(1)} см` : "—"}
+                value={effectiveRow ? `${(effectiveRow.drift_m * CM_PER_M).toFixed(1)} см` : "—"}
               />
+              {movingTargetData ? (
+                <>
+                  <StatCard
+                    label="Упреждение цели"
+                    value={movingTargetData.leadLabel}
+                  />
+                  <StatCard
+                    label="Упреждение (клики)"
+                    value={
+                      optic.click_value
+                        ? `${movingTargetData.leadClicks > 0 ? "R" : movingTargetData.leadClicks < 0 ? "L" : ""} ${Math.abs(movingTargetData.leadClicks).toFixed(1)}`
+                        : "—"
+                    }
+                  />
+                  <StatCard
+                    label="Упреждение по высоте"
+                    value={movingTargetData.verticalLeadLabel}
+                  />
+                  <StatCard
+                    label="Упреждение (клики, высота)"
+                    value={
+                      optic.click_value
+                        ? `${movingTargetData.verticalLeadClicks > 0 ? "U" : movingTargetData.verticalLeadClicks < 0 ? "D" : ""} ${Math.abs(movingTargetData.verticalLeadClicks).toFixed(1)}`
+                        : "—"
+                    }
+                  />
+                  <StatCard
+                    label="Итог по высоте"
+                    value={`${effectiveHoldY.toFixed(2)} ${optic.unit}`}
+                  />
+                  <StatCard
+                    label="Эфф. дистанция"
+                    value={`${movingTargetData.adjustedDistance.toFixed(0)} м`}
+                  />
+                  <StatCard
+                    label="Упреждение (см)"
+                    value={`${(movingTargetData.leadMeters * CM_PER_M).toFixed(1)} см`}
+                  />
+                  <StatCard
+                    label="Упреждение (см, высота)"
+                    value={`${(movingTargetData.verticalLeadMeters * CM_PER_M).toFixed(1)} см`}
+                  />
+                </>
+              ) : null}
               </div>
               <div className="mt-4 flex flex-wrap gap-3">
               <StatCard
@@ -973,7 +1428,9 @@ export default function App() {
               </div>
               <ReticleCanvas
                 holdX={horizontalCorrection}
-                holdY={currentRow ? currentRow.correction : 0}
+                leadX={movingTargetData?.leadUnits ?? 0}
+                leadY={movingTargetData?.verticalLeadUnits ?? 0}
+                holdY={effectiveRow ? effectiveRow.correction : 0}
                 unit={optic.unit as "MIL" | "MOA"}
                 pattern={reticlePattern}
                 imageSrc={activeReticleImage}
@@ -1059,6 +1516,67 @@ export default function App() {
                 </table>
               </div>
             </div>
+
+            {movingTarget.enabled ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <ResultIcon className="h-5 w-5 text-ocean" />
+                  <h2 className="font-display text-base text-white">Упреждение по движущейся цели</h2>
+                </div>
+                <div className="overflow-x-auto rounded-xl border border-slate-700/70 bg-slate-900/80">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-900/90 text-slate-200 text-xs uppercase tracking-wide">
+                      <tr>
+                        <th className="px-4 py-3 text-left">Distance</th>
+                        <th className="px-4 py-3 text-left">Lead (L/R)</th>
+                        <th className="px-4 py-3 text-left">Lead (Up/Down)</th>
+                        <th className="px-4 py-3 text-left">Clicks (L/R)</th>
+                        <th className="px-4 py-3 text-left">Clicks (U/D)</th>
+                        <th className="px-4 py-3 text-left">Lead (см)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {movingLeadRows.length ? (
+                        movingLeadRows.map((row) => (
+                          <tr key={`lead-${row.distance_m}`} className="border-t border-slate-700/70 text-slate-200">
+                            <td className="px-4 py-3">{row.distance_m.toFixed(0)} м</td>
+                            <td className="px-4 py-3">
+                              {row.leadUnits === 0
+                                ? "0.0"
+                                : `${row.leadUnits > 0 ? "R" : "L"} ${Math.abs(row.leadUnits).toFixed(2)} ${optic.unit}`}
+                            </td>
+                            <td className="px-4 py-3">
+                              {row.verticalLeadUnits === 0
+                                ? "0.0"
+                                : `${row.verticalLeadUnits > 0 ? "Up" : "Down"} ${Math.abs(row.verticalLeadUnits).toFixed(2)} ${optic.unit}`}
+                            </td>
+                            <td className="px-4 py-3">
+                              {optic.click_value
+                                ? `${row.leadClicks > 0 ? "R" : row.leadClicks < 0 ? "L" : ""} ${Math.abs(row.leadClicks).toFixed(1)}`
+                                : "—"}
+                            </td>
+                            <td className="px-4 py-3">
+                              {optic.click_value
+                                ? `${row.verticalLeadClicks > 0 ? "U" : row.verticalLeadClicks < 0 ? "D" : ""} ${Math.abs(row.verticalLeadClicks).toFixed(1)}`
+                                : "—"}
+                            </td>
+                            <td className="px-4 py-3">
+                              {`${(row.leadMeters * CM_PER_M).toFixed(1)} / ${(row.verticalLeadMeters * CM_PER_M).toFixed(1)}`}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td className="px-4 py-3 text-slate-300" colSpan={6}>
+                            Нет данных. Выполните расчет.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 

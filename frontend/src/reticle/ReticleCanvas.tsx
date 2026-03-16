@@ -9,6 +9,8 @@ interface ReticlePattern {
 
 interface ReticleProps {
   holdX: number;
+  leadX?: number;
+  leadY?: number;
   holdY: number;
   unit: "MIL" | "MOA";
   pattern?: ReticlePattern;
@@ -99,6 +101,8 @@ function angularSizeToUnit(sizeCm: number, distanceMeters: number, unit: "MIL" |
 
 export function ReticleCanvas({
   holdX,
+  leadX = 0,
+  leadY = 0,
   holdY,
   unit,
   pattern,
@@ -224,10 +228,14 @@ export function ReticleCanvas({
   const sceneSuffix = unit.toLowerCase();
   const sfpScale = focalPlane === "SFP" ? clampedMagnification / Math.max(maxMagnification, safeMinMagnification) : 1;
   const displayHoldX = holdX * sfpScale;
+  const displayLeadX = leadX * sfpScale;
   const displayHoldY = holdY * sfpScale;
+  const displayLeadY = leadY * sfpScale;
   const targetCenterRadius = Math.max(extent * 0.018, 0.08);
-  const aimMarkerXTarget = Math.max(-extent, Math.min(extent, displayHoldX));
-  const aimMarkerYTarget = Math.max(-extent, Math.min(extent, -displayHoldY));
+  const combinedAimX = displayHoldX + displayLeadX;
+  const combinedAimY = displayHoldY + displayLeadY;
+  const aimMarkerXTarget = Math.max(-extent, Math.min(extent, combinedAimX));
+  const aimMarkerYTarget = Math.max(-extent, Math.min(extent, -combinedAimY));
   const targetOffsetXTarget = viewMode === "shift-target" ? -aimMarkerXTarget : 0;
   const targetOffsetYTarget = viewMode === "shift-target" ? -aimMarkerYTarget : 0;
   const reticleScaleTarget = focalPlane === "FFP" ? sceneScaleTarget : 1;
@@ -237,8 +245,14 @@ export function ReticleCanvas({
   const animatedAimMarkerY = useAnimatedNumber(aimMarkerYTarget);
   const animatedTargetOffsetX = useAnimatedNumber(targetOffsetXTarget);
   const animatedTargetOffsetY = useAnimatedNumber(targetOffsetYTarget);
+  const animatedLeadX = useAnimatedNumber(displayLeadX);
+  const animatedLeadY = useAnimatedNumber(displayLeadY);
   const holdLabelX =
     Math.abs(holdX) < 0.05 ? "0.0" : `${Math.abs(holdX).toFixed(2)} ${unit} ${holdX >= 0 ? "R" : "L"}`;
+  const leadLabel =
+    Math.abs(leadX) < 0.05 ? "0.0" : `${Math.abs(leadX).toFixed(2)} ${unit} ${leadX >= 0 ? "R" : "L"}`;
+  const leadLabelY =
+    Math.abs(leadY) < 0.05 ? "0.0" : `${Math.abs(leadY).toFixed(2)} ${unit} ${leadY >= 0 ? "Up" : "Down"}`;
   const holdLabelY =
     Math.abs(holdY) < 0.05 ? "0.0" : `${Math.abs(holdY).toFixed(2)} ${unit} ${holdY >= 0 ? "Up" : "Down"}`;
   const displayLabelX =
@@ -783,6 +797,12 @@ export function ReticleCanvas({
           <circle cx={animatedAimMarkerX} cy={animatedAimMarkerY} r={0.3} fill="none" stroke="#ff7b4a" strokeWidth={0.075} />
           <circle cx={animatedAimMarkerX} cy={animatedAimMarkerY} r={0.09} fill="#ff7b4a" />
           <circle cx={0} cy={0} r={0.12} fill="#38bdf8" opacity={0.95} />
+          {Math.abs(displayLeadX) > 1e-3 || Math.abs(displayLeadY) > 1e-3 ? (
+            <>
+              <circle cx={animatedLeadX} cy={-animatedLeadY} r={0.2} fill="none" stroke="#facc15" strokeWidth={0.06} opacity={0.9} />
+              <circle cx={animatedLeadX} cy={-animatedLeadY} r={0.07} fill="#facc15" opacity={0.95} />
+            </>
+          ) : null}
         </>
       ) : (
         <>
@@ -870,11 +890,11 @@ export function ReticleCanvas({
         </div>
       </div>
       <div className="px-4 py-2 text-xs text-sand bg-black flex items-center justify-between">
-        <span>{viewMode === "hold" ? "Оранжевый маркер: точка выноса, синяя точка: центр цели" : "Цель смещена, сетка остаётся по центру"}</span>
+        <span>{viewMode === "hold" ? "Оранжевый маркер: точка выноса, жёлтая точка: упреждение цели, синяя точка: центр цели" : "Цель смещена, сетка остаётся по центру"}</span>
         <span>{focalPlane} · {unit} · {clampedMagnification.toFixed(1)}x</span>
       </div>
       <div className="px-4 py-2 text-[11px] text-slate-300 bg-slate-950/80 border-t border-slate-700/70">
-        Ballistic hold: {holdLabelY} · {holdLabelX} {focalPlane === "SFP" ? `· Display at ${clampedMagnification.toFixed(1)}x: ${displayLabelY} · ${displayLabelX}` : ""}{opticFov ? ` · Apparent distance: ${apparentDistanceMeters.toFixed(0)} m` : ""}{currentFovAt100m ? ` · FOV ${currentFovAt100m.toFixed(2)} m @ 100 m` : ""}
+        Ballistic hold: {holdLabelY} · {holdLabelX}{leadX || leadY ? ` · Lead: ${leadLabel} / ${leadLabelY}` : ""} {focalPlane === "SFP" ? `· Display at ${clampedMagnification.toFixed(1)}x: ${displayLabelY} · ${displayLabelX}` : ""}{opticFov ? ` · Apparent distance: ${apparentDistanceMeters.toFixed(0)} m` : ""}{currentFovAt100m ? ` · FOV ${currentFovAt100m.toFixed(2)} m @ 100 m` : ""}
       </div>
     </div>
   );
