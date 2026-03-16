@@ -4,9 +4,10 @@ interface WindDialProps {
   directionDeg: number;
   speedMps: number;
   onChange?: (value: number) => void;
+  unitLabel?: string;
 }
 
-export function WindDial({ directionDeg, speedMps, onChange }: WindDialProps) {
+export function WindDial({ directionDeg, speedMps, onChange, unitLabel = "м/с" }: WindDialProps) {
   const angle = ((directionDeg % 360) + 360) % 360;
   const speedLabel = Number.isFinite(speedMps) ? Math.abs(speedMps).toFixed(1) : "—";
 
@@ -131,7 +132,9 @@ export function WindDial({ directionDeg, speedMps, onChange }: WindDialProps) {
         <circle cx="100" cy="100" r="7" fill="#f8fafc" />
 
         <text x="100" y="96" textAnchor="middle" fontSize="14" fill="#e11d2e">{angle.toFixed(1)}°</text>
-        <text x="100" y="122" textAnchor="middle" fontSize="12" fill="#31ff31">Скорость ветра, м/с</text>
+        <text x="100" y="122" textAnchor="middle" fontSize="12" fill="#31ff31">
+          Скорость ветра, {unitLabel}
+        </text>
         <text x="100" y="150" textAnchor="middle" fontSize="28" fill="#31ff31">{speedLabel}</text>
       </svg>
       <div className="wind-dial-label">

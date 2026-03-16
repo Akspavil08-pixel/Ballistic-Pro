@@ -42,6 +42,66 @@ option {
   border-bottom: 1px solid #2a313b;
 }
 
+.header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.settings-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid #2a313b;
+  background: #0b0f12;
+  color: #e5e7eb;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.settings-popover {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  min-width: 220px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #0b0f12;
+  border: 1px solid #1f2a33;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  z-index: 50;
+}
+
+.settings-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+.settings-select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #2a313b;
+  background: #111720;
+  color: #e5e7eb;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
 .mobile-shell {
   max-width: 520px;
 }

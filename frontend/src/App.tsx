@@ -27,6 +27,12 @@ const CACHE_KEY = "ballistics:last";
 const CM_PER_M = 100;
 const DEFAULT_MAGNIFICATION_RANGE = { min: 3, max: 18 };
 const DEG_TO_RAD = Math.PI / 180;
+const M_TO_YD = 1.0936133;
+const M_TO_FT = 3.28084;
+const HPA_TO_INHG = 0.0295299830714;
+const MM_TO_IN = 1 / 25.4;
+const CM_TO_IN = 1 / 2.54;
+const J_TO_FTLB = 0.737562149;
 
 const targetMotionTypes = [
   { id: "walk", label: "Человек (шаг ~1.5 м/с)", speed: 1.5 },
@@ -340,6 +346,8 @@ export default function App() {
     time_step_s: 0.002,
     mode: "basic"
   });
+  const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric");
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [targetId, setTargetId] = useState(targetModels[0].id);
   const [targetSizeOverride, setTargetSizeOverride] = useState({
@@ -371,6 +379,71 @@ export default function App() {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const isPro = settings.mode === "pro";
+  const unitOptions = [
+    { value: "metric", label: "Метрическая (м, °C, м/с)" },
+    { value: "imperial", label: "Имперская (yd, °F, ft/s)" }
+  ];
+  const unitLabels =
+    unitSystem === "metric"
+      ? {
+          distance: "м",
+          speed: "м/с",
+          temp: "°C",
+          pressure: "гПа",
+          altitude: "м",
+          length: "мм",
+          smallLength: "см",
+          energy: "Дж",
+          drop: "см"
+        }
+      : {
+          distance: "yd",
+          speed: "ft/s",
+          temp: "°F",
+          pressure: "inHg",
+          altitude: "ft",
+          length: "in",
+          smallLength: "in",
+          energy: "ft·lb",
+          drop: "in"
+        };
+
+  const displayDistance = (meters: number) =>
+    unitSystem === "metric" ? meters : meters * M_TO_YD;
+  const parseDistance = (value: number) =>
+    unitSystem === "metric" ? value : value / M_TO_YD;
+  const displaySpeed = (mps: number) =>
+    unitSystem === "metric" ? mps : mps * M_TO_FT;
+  const parseSpeed = (value: number) =>
+    unitSystem === "metric" ? value : value / M_TO_FT;
+  const displayTemp = (celsius: number) =>
+    unitSystem === "metric" ? celsius : celsius * (9 / 5) + 32;
+  const parseTemp = (value: number) =>
+    unitSystem === "metric" ? value : (value - 32) * (5 / 9);
+  const displayPressure = (hpa: number) =>
+    unitSystem === "metric" ? hpa : hpa * HPA_TO_INHG;
+  const parsePressure = (value: number) =>
+    unitSystem === "metric" ? value : value / HPA_TO_INHG;
+  const displayAltitude = (meters: number) =>
+    unitSystem === "metric" ? meters : meters * M_TO_FT;
+  const parseAltitude = (value: number) =>
+    unitSystem === "metric" ? value : value / M_TO_FT;
+  const displayLength = (mm: number) =>
+    unitSystem === "metric" ? mm : mm * MM_TO_IN;
+  const parseLength = (value: number) =>
+    unitSystem === "metric" ? value : value / MM_TO_IN;
+  const displayTempCoeff = (perC: number) =>
+    unitSystem === "metric" ? perC : perC / 1.8;
+  const parseTempCoeff = (value: number) =>
+    unitSystem === "metric" ? value : value * 1.8;
+  const displaySmallLength = (cm: number) =>
+    unitSystem === "metric" ? cm : cm * CM_TO_IN;
+  const parseSmallLength = (value: number) =>
+    unitSystem === "metric" ? value : value / CM_TO_IN;
+  const displayDrop = (meters: number) =>
+    unitSystem === "metric" ? meters * CM_PER_M : meters * CM_PER_M * CM_TO_IN;
+  const displayEnergy = (joules: number) =>
+    unitSystem === "metric" ? joules : joules * J_TO_FTLB;
 
   const activeReticle =
     reticleProfiles.find((reticle) => reticle.id === reticleId) ?? reticleProfiles[0];
@@ -705,12 +778,40 @@ export default function App() {
     <div className="min-h-screen app-shell strelok-ui" data-mobile-pane={mobilePane}>
       <div className="app-header">
         <div className="mx-auto mobile-shell px-4 py-4 flex flex-col gap-3">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.4em] text-slate-400">Ballistic Pro</p>
-            <h1 className="font-display text-2xl text-white">Профессиональный баллистический калькулятор</h1>
-            <p className="text-xs text-slate-300 mt-1">
-              Быстрый ввод, точная физика, готовые поправки.
-            </p>
+          <div className="header-top">
+            <div className="header-title">
+              <p className="text-[11px] uppercase tracking-[0.4em] text-slate-400">Ballistic Pro</p>
+              <h1 className="font-display text-2xl text-white">Профессиональный баллистический калькулятор</h1>
+              <p className="text-xs text-slate-300 mt-1">
+                Быстрый ввод, точная физика, готовые поправки.
+              </p>
+            </div>
+            <div className="header-actions">
+              <button
+                type="button"
+                className="settings-button"
+                onClick={() => setSettingsOpen((s) => !s)}
+              >
+                <SettingsIcon className="h-5 w-5" />
+                <span>Единицы</span>
+              </button>
+              {settingsOpen ? (
+                <div className="settings-popover">
+                  <p className="settings-title">Единицы измерения</p>
+                  <select
+                    className="settings-select"
+                    value={unitSystem}
+                    onChange={(event) => setUnitSystem(event.target.value as "metric" | "imperial")}
+                  >
+                    {unitOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+            </div>
           </div>
           <div className="flex items-center gap-2 text-slate-200">
             <Toggle label="Обучение" checked={training} onChange={setTraining} />
@@ -732,19 +833,22 @@ export default function App() {
             </button>
           </div>
           <div className="segment-bar">
-            {[
-              { id: "weapon", label: "Оружие", icon: <TargetIcon className="h-4 w-4" /> },
-              { id: "ammo", label: "Патрон", icon: <BulletIcon className="h-4 w-4" /> },
-              { id: "optic", label: "Прицел", icon: <ScopeIcon className="h-4 w-4" /> },
-              { id: "weather", label: "Погода", icon: <WeatherIcon className="h-4 w-4" /> },
-              { id: "geometry", label: "Дистанция", icon: <DistanceIcon className="h-4 w-4" /> }
-            ].map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setActiveSection(item.id as typeof activeSection)}
-                className={`segment-pill segment-pill-icon ${activeSection === item.id ? "active" : ""}`}
-              >
+                {[
+                  { id: "weapon", label: "Оружие", icon: <TargetIcon className="h-4 w-4" /> },
+                  { id: "ammo", label: "Патрон", icon: <BulletIcon className="h-4 w-4" /> },
+                  { id: "optic", label: "Прицел", icon: <ScopeIcon className="h-4 w-4" /> },
+                  { id: "weather", label: "Погода", icon: <WeatherIcon className="h-4 w-4" /> },
+                  { id: "geometry", label: "Дистанция", icon: <DistanceIcon className="h-4 w-4" /> }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveSection(item.id as typeof activeSection);
+                      setMobilePane("input");
+                    }}
+                    className={`segment-pill segment-pill-icon ${activeSection === item.id ? "active" : ""}`}
+                  >
                 <span className="segment-icon">{item.icon}</span>
                 <span className="segment-label">{item.label}</span>
               </button>
@@ -811,9 +915,9 @@ export default function App() {
               id="caliber"
               label="Калибр"
               tooltipKey="caliber"
-              value={weapon.caliber_mm}
-              onChange={(v) => setWeapon((w) => ({ ...w, caliber_mm: Number(v) }))}
-              unit="мм"
+              value={Number(displayLength(weapon.caliber_mm).toFixed(unitSystem === "metric" ? 2 : 3))}
+              onChange={(v) => setWeapon((w) => ({ ...w, caliber_mm: parseLength(Number(v)) }))}
+              unit={unitLabels.length}
               step={0.01}
               icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
             />
@@ -821,9 +925,9 @@ export default function App() {
               id="barrel"
               label="Длина ствола"
               tooltipKey="barrelLength"
-              value={weapon.barrel_length_mm}
-              onChange={(v) => setWeapon((w) => ({ ...w, barrel_length_mm: Number(v) }))}
-              unit="мм"
+              value={Number(displayLength(weapon.barrel_length_mm).toFixed(unitSystem === "metric" ? 0 : 2))}
+              onChange={(v) => setWeapon((w) => ({ ...w, barrel_length_mm: parseLength(Number(v)) }))}
+              unit={unitLabels.length}
               step={1}
               icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
             />
@@ -843,9 +947,9 @@ export default function App() {
                   id="rifling"
                   label="Шаг нарезов"
                   tooltipKey="twist"
-                  value={weapon.rifling_step_mm}
-                  onChange={(v) => setWeapon((w) => ({ ...w, rifling_step_mm: Number(v) }))}
-                  unit="мм/оборот"
+                  value={Number(displayLength(weapon.rifling_step_mm).toFixed(unitSystem === "metric" ? 0 : 2))}
+                  onChange={(v) => setWeapon((w) => ({ ...w, rifling_step_mm: parseLength(Number(v)) }))}
+                  unit={unitSystem === "metric" ? "мм/оборот" : "in/оборот"}
                   step={1}
                   icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
                 />
@@ -855,9 +959,9 @@ export default function App() {
               id="sight-height"
               label="Высота прицела"
               tooltipKey="sightHeight"
-              value={weapon.sight_height_mm}
-              onChange={(v) => setWeapon((w) => ({ ...w, sight_height_mm: Number(v) }))}
-              unit="мм"
+              value={Number(displayLength(weapon.sight_height_mm).toFixed(unitSystem === "metric" ? 1 : 2))}
+              onChange={(v) => setWeapon((w) => ({ ...w, sight_height_mm: parseLength(Number(v)) }))}
+              unit={unitLabels.length}
               step={0.5}
               icon={<IconWrapper><ScopeIcon className="h-5 w-5" /></IconWrapper>}
             />
@@ -865,9 +969,9 @@ export default function App() {
               id="zero"
               label="Дистанция пристрелки"
               tooltipKey="zeroDistance"
-              value={weapon.zero_distance_m}
-              onChange={(v) => setWeapon((w) => ({ ...w, zero_distance_m: Number(v) }))}
-              unit="м"
+              value={Number(displayDistance(weapon.zero_distance_m).toFixed(unitSystem === "metric" ? 0 : 1))}
+              onChange={(v) => setWeapon((w) => ({ ...w, zero_distance_m: parseDistance(Number(v)) }))}
+              unit={unitLabels.distance}
               step={1}
               icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
             />
@@ -899,9 +1003,9 @@ export default function App() {
               id="muzzle"
               label="Начальная скорость"
               tooltipKey="muzzleVelocity"
-              value={ammo.muzzle_velocity_mps}
-              onChange={(v) => setAmmo((a) => ({ ...a, muzzle_velocity_mps: Number(v) }))}
-              unit="м/с"
+              value={Number(displaySpeed(ammo.muzzle_velocity_mps).toFixed(unitSystem === "metric" ? 0 : 1))}
+              onChange={(v) => setAmmo((a) => ({ ...a, muzzle_velocity_mps: parseSpeed(Number(v)) }))}
+              unit={unitLabels.speed}
               step={1}
               icon={<IconWrapper><BulletIcon className="h-5 w-5" /></IconWrapper>}
             />
@@ -932,9 +1036,9 @@ export default function App() {
                   id="powder"
                   label="Температура пороха"
                   tooltipKey="powderTemp"
-                  value={ammo.powder_temp_c}
-                  onChange={(v) => setAmmo((a) => ({ ...a, powder_temp_c: Number(v) }))}
-                  unit="°C"
+                  value={Number(displayTemp(ammo.powder_temp_c).toFixed(unitSystem === "metric" ? 0 : 1))}
+                  onChange={(v) => setAmmo((a) => ({ ...a, powder_temp_c: parseTemp(Number(v)) }))}
+                  unit={unitLabels.temp}
                   step={1}
                   icon={<IconWrapper><BulletIcon className="h-5 w-5" /></IconWrapper>}
                 />
@@ -942,9 +1046,11 @@ export default function App() {
                   id="temp-coeff"
                   label="Коэффициент скорости"
                   tooltipKey="powderTemp"
-                  value={ammo.muzzle_velocity_temp_coeff}
-                  onChange={(v) => setAmmo((a) => ({ ...a, muzzle_velocity_temp_coeff: Number(v) }))}
-                  unit="1/°C"
+                  value={Number(displayTempCoeff(ammo.muzzle_velocity_temp_coeff).toFixed(3))}
+                  onChange={(v) =>
+                    setAmmo((a) => ({ ...a, muzzle_velocity_temp_coeff: parseTempCoeff(Number(v)) }))
+                  }
+                  unit={unitSystem === "metric" ? "1/°C" : "1/°F"}
                   step={0.001}
                   icon={<IconWrapper><BulletIcon className="h-5 w-5" /></IconWrapper>}
                 />
@@ -952,9 +1058,9 @@ export default function App() {
                   id="bullet-length"
                   label="Длина пули"
                   tooltipKey="bulletLength"
-                  value={ammo.bullet_length_mm}
-                  onChange={(v) => setAmmo((a) => ({ ...a, bullet_length_mm: Number(v) }))}
-                  unit="мм"
+                  value={Number(displayLength(ammo.bullet_length_mm).toFixed(unitSystem === "metric" ? 1 : 2))}
+                  onChange={(v) => setAmmo((a) => ({ ...a, bullet_length_mm: parseLength(Number(v)) }))}
+                  unit={unitLabels.length}
                   step={0.1}
                   icon={<IconWrapper><BulletIcon className="h-5 w-5" /></IconWrapper>}
                 />
@@ -1046,29 +1152,29 @@ export default function App() {
               <SectionCard title="4. Погода" subtitle="Текущие условия">
             <div className="weather-strelok">
               <div className="weather-readouts">
-                <Field
-                  id="temp"
-                  label="Температура"
-                  tooltipKey="temperature"
-                  value={weather.temperature_c}
-                  onChange={(v) => setWeather((w) => ({ ...w, temperature_c: Number(v) }))}
-                  unit="°C"
-                  step={1}
-                  icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
-                />
-                <Field
-                  id="pressure"
-                  label="Давление"
-                  tooltipKey="pressure"
-                  value={weather.pressure_hpa}
-                  onChange={(v) => setWeather((w) => ({ ...w, pressure_hpa: Number(v) }))}
-                  unit="гПа"
-                  step={1}
-                  icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
-                />
-                <Field
-                  id="humidity"
-                  label="Влажность"
+              <Field
+                id="temp"
+                label="Температура"
+                tooltipKey="temperature"
+                value={Number(displayTemp(weather.temperature_c).toFixed(1))}
+                onChange={(v) => setWeather((w) => ({ ...w, temperature_c: parseTemp(Number(v)) }))}
+                unit={unitLabels.temp}
+                step={unitSystem === "metric" ? 1 : 1}
+                icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
+              />
+              <Field
+                id="pressure"
+                label="Давление"
+                tooltipKey="pressure"
+                value={Number(displayPressure(weather.pressure_hpa).toFixed(unitSystem === "metric" ? 1 : 2))}
+                onChange={(v) => setWeather((w) => ({ ...w, pressure_hpa: parsePressure(Number(v)) }))}
+                unit={unitLabels.pressure}
+                step={unitSystem === "metric" ? 1 : 0.01}
+                icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
+              />
+              <Field
+                id="humidity"
+                label="Влажность"
                   tooltipKey="humidity"
                   value={weather.humidity_percent}
                   onChange={(v) => setWeather((w) => ({ ...w, humidity_percent: Number(v) }))}
@@ -1076,35 +1182,36 @@ export default function App() {
                   step={1}
                   icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
                 />
-                <Field
-                  id="altitude"
-                  label="Высота"
-                  tooltipKey="altitude"
-                  value={weather.altitude_m}
-                  onChange={(v) => setWeather((w) => ({ ...w, altitude_m: Number(v) }))}
-                  unit="м"
-                  step={1}
-                  icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
-                />
+              <Field
+                id="altitude"
+                label="Высота"
+                tooltipKey="altitude"
+                value={Number(displayAltitude(weather.altitude_m).toFixed(unitSystem === "metric" ? 0 : 1))}
+                onChange={(v) => setWeather((w) => ({ ...w, altitude_m: parseAltitude(Number(v)) }))}
+                unit={unitLabels.altitude}
+                step={unitSystem === "metric" ? 1 : 1}
+                icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
+              />
               </div>
               <div className="weather-dial">
                 <WindDial
                   directionDeg={weather.wind_direction_deg}
-                  speedMps={weather.wind_speed_mps}
+                  speedMps={displaySpeed(weather.wind_speed_mps)}
+                  unitLabel={unitLabels.speed}
                   onChange={(value) => setWeather((w) => ({ ...w, wind_direction_deg: value }))}
                 />
                 <Field
                   id="wind"
                   label="Скорость ветра"
                   tooltipKey="windSpeed"
-                  value={weather.wind_speed_mps}
+                  value={Number(displaySpeed(weather.wind_speed_mps).toFixed(1))}
                   onChange={(v) =>
                     setWeather((w) => ({
                       ...w,
-                      wind_speed_mps: Math.max(0, Number(v))
+                      wind_speed_mps: Math.max(0, parseSpeed(Number(v)))
                     }))
                   }
-                  unit="м/с"
+                  unit={unitLabels.speed}
                   step={0.1}
                   min={0}
                   icon={<IconWrapper><WeatherIcon className="h-5 w-5" /></IconWrapper>}
@@ -1120,9 +1227,9 @@ export default function App() {
               id="distance"
               label="Дистанция"
               tooltipKey="distance"
-              value={geometry.distance_m}
-              onChange={(v) => setGeometry((g) => ({ ...g, distance_m: Number(v) }))}
-              unit="м"
+              value={Number(displayDistance(geometry.distance_m).toFixed(unitSystem === "metric" ? 0 : 1))}
+              onChange={(v) => setGeometry((g) => ({ ...g, distance_m: parseDistance(Number(v)) }))}
+              unit={unitLabels.distance}
               step={1}
               icon={<IconWrapper><DistanceIcon className="h-5 w-5" /></IconWrapper>}
             />
@@ -1158,9 +1265,11 @@ export default function App() {
                   id="target-width-custom"
                   label="Ширина цели"
                   tooltipKey="target"
-                  value={targetSizeOverride.widthCm}
-                  onChange={(v) => setTargetSizeOverride((prev) => ({ ...prev, widthCm: Number(v) }))}
-                  unit="см"
+                  value={Number(displaySmallLength(targetSizeOverride.widthCm).toFixed(unitSystem === "metric" ? 0 : 1))}
+                  onChange={(v) =>
+                    setTargetSizeOverride((prev) => ({ ...prev, widthCm: parseSmallLength(Number(v)) }))
+                  }
+                  unit={unitLabels.smallLength}
                   step={1}
                   icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
                 />
@@ -1168,9 +1277,11 @@ export default function App() {
                   id="target-height-custom"
                   label="Высота цели"
                   tooltipKey="target"
-                  value={targetSizeOverride.heightCm}
-                  onChange={(v) => setTargetSizeOverride((prev) => ({ ...prev, heightCm: Number(v) }))}
-                  unit="см"
+                  value={Number(displaySmallLength(targetSizeOverride.heightCm).toFixed(unitSystem === "metric" ? 0 : 1))}
+                  onChange={(v) =>
+                    setTargetSizeOverride((prev) => ({ ...prev, heightCm: parseSmallLength(Number(v)) }))
+                  }
+                  unit={unitLabels.smallLength}
                   step={1}
                   icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
                 />
@@ -1179,7 +1290,9 @@ export default function App() {
             <div className="rounded-lg border border-slate-700/70 bg-slate-900/70 p-3 text-xs text-slate-300">
               <p className="font-semibold text-white">Размер мишени</p>
               <p className="mt-1 text-slate-200">
-                {targetSizeOverride.enabled ? `${targetSizeOverride.widthCm} × ${targetSizeOverride.heightCm}` : `${target.widthCm} × ${target.heightCm}`} см
+                {targetSizeOverride.enabled
+                  ? `${displaySmallLength(targetSizeOverride.widthCm).toFixed(0)} × ${displaySmallLength(targetSizeOverride.heightCm).toFixed(0)}`
+                  : `${displaySmallLength(target.widthCm).toFixed(0)} × ${displaySmallLength(target.heightCm).toFixed(0)}`} {unitLabels.smallLength}
               </p>
             </div>
             <Field
@@ -1236,9 +1349,11 @@ export default function App() {
                   id="moving-target-speed"
                   label="Скорость цели"
                   tooltipKey="target"
-                  value={movingTarget.speed_mps}
-                  onChange={(v) => setMovingTarget((m) => ({ ...m, speed_mps: Number(v), type: "custom" }))}
-                  unit="м/с"
+                  value={Number(displaySpeed(movingTarget.speed_mps).toFixed(1))}
+                  onChange={(v) =>
+                    setMovingTarget((m) => ({ ...m, speed_mps: parseSpeed(Number(v)), type: "custom" }))
+                  }
+                  unit={unitLabels.speed}
                   step={0.1}
                   icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
                 />
@@ -1246,9 +1361,11 @@ export default function App() {
                   id="moving-target-vertical-speed"
                   label="Вертикальная скорость"
                   tooltipKey="target"
-                  value={movingTarget.vertical_speed_mps}
-                  onChange={(v) => setMovingTarget((m) => ({ ...m, vertical_speed_mps: Number(v) }))}
-                  unit="м/с"
+                  value={Number(displaySpeed(movingTarget.vertical_speed_mps).toFixed(1))}
+                  onChange={(v) =>
+                    setMovingTarget((m) => ({ ...m, vertical_speed_mps: parseSpeed(Number(v)) }))
+                  }
+                  unit={unitLabels.speed}
                   step={0.1}
                   icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
                 />
@@ -1295,9 +1412,11 @@ export default function App() {
                       id="moving-target-arc-radius"
                       label="Радиус поворота"
                       tooltipKey="target"
-                      value={movingTarget.arc_radius_m}
-                      onChange={(v) => setMovingTarget((m) => ({ ...m, arc_radius_m: Number(v) }))}
-                      unit="м"
+                      value={Number(displayDistance(movingTarget.arc_radius_m).toFixed(unitSystem === "metric" ? 0 : 1))}
+                      onChange={(v) =>
+                        setMovingTarget((m) => ({ ...m, arc_radius_m: parseDistance(Number(v)) }))
+                      }
+                      unit={unitLabels.distance}
                       step={1}
                       icon={<IconWrapper><TargetIcon className="h-5 w-5" /></IconWrapper>}
                     />
@@ -1372,9 +1491,9 @@ export default function App() {
                   id="max-range"
                   label="Макс. дальность"
                   tooltipKey="maxRange"
-                  value={settings.max_range_m}
-                  onChange={(v) => setSettings((s) => ({ ...s, max_range_m: Number(v) }))}
-                  unit="м"
+                  value={Number(displayDistance(settings.max_range_m).toFixed(unitSystem === "metric" ? 0 : 1))}
+                  onChange={(v) => setSettings((s) => ({ ...s, max_range_m: parseDistance(Number(v)) }))}
+                  unit={unitLabels.distance}
                   step={10}
                   icon={<IconWrapper><DistanceIcon className="h-5 w-5" /></IconWrapper>}
                 />
@@ -1382,9 +1501,9 @@ export default function App() {
                   id="step"
                   label="Шаг таблицы"
                   tooltipKey="step"
-                  value={settings.step_m}
-                  onChange={(v) => setSettings((s) => ({ ...s, step_m: Number(v) }))}
-                  unit="м"
+                  value={Number(displayDistance(settings.step_m).toFixed(unitSystem === "metric" ? 0 : 1))}
+                  onChange={(v) => setSettings((s) => ({ ...s, step_m: parseDistance(Number(v)) }))}
+                  unit={unitLabels.distance}
                   step={1}
                   icon={<IconWrapper><DistanceIcon className="h-5 w-5" /></IconWrapper>}
                 />
@@ -1481,19 +1600,19 @@ export default function App() {
               />
               <StatCard
                 label="Скорость"
-                value={effectiveRow ? `${effectiveRow.velocity_mps.toFixed(1)} м/с` : "—"}
+                value={effectiveRow ? `${displaySpeed(effectiveRow.velocity_mps).toFixed(1)} ${unitLabels.speed}` : "—"}
               />
               <StatCard
                 label="Энергия"
-                value={effectiveRow ? `${effectiveRow.energy_j.toFixed(0)} Дж` : "—"}
+                value={effectiveRow ? `${displayEnergy(effectiveRow.energy_j).toFixed(0)} ${unitLabels.energy}` : "—"}
               />
               <StatCard
                 label="Падение"
-                value={effectiveRow ? `${(effectiveRow.drop_m * CM_PER_M).toFixed(1)} см` : "—"}
+                value={effectiveRow ? `${displayDrop(effectiveRow.drop_m).toFixed(1)} ${unitLabels.drop}` : "—"}
               />
               <StatCard
                 label="Снос ветром"
-                value={effectiveRow ? `${(effectiveRow.drift_m * CM_PER_M).toFixed(1)} см` : "—"}
+                value={effectiveRow ? `${displayDrop(effectiveRow.drift_m).toFixed(1)} ${unitLabels.drop}` : "—"}
               />
               {movingTargetData ? (
                 <>
@@ -1527,15 +1646,15 @@ export default function App() {
                   />
                   <StatCard
                     label="Эфф. дистанция"
-                    value={`${movingTargetData.adjustedDistance.toFixed(0)} м`}
+                    value={`${displayDistance(movingTargetData.adjustedDistance).toFixed(unitSystem === "metric" ? 0 : 1)} ${unitLabels.distance}`}
                   />
                   <StatCard
-                    label="Упреждение (см)"
-                    value={`${(movingTargetData.leadMeters * CM_PER_M).toFixed(1)} см`}
+                    label={`Упреждение (${unitLabels.drop})`}
+                    value={`${displayDrop(movingTargetData.leadMeters).toFixed(1)} ${unitLabels.drop}`}
                   />
                   <StatCard
-                    label="Упреждение (см, высота)"
-                    value={`${(movingTargetData.verticalLeadMeters * CM_PER_M).toFixed(1)} см`}
+                    label={`Упреждение (${unitLabels.drop}, высота)`}
+                    value={`${displayDrop(movingTargetData.verticalLeadMeters).toFixed(1)} ${unitLabels.drop}`}
                   />
                 </>
               ) : null}
@@ -1547,7 +1666,11 @@ export default function App() {
               />
               <StatCard
                 label="Скорость звука"
-                value={result ? `${result.summary.speed_of_sound_mps.toFixed(1)} м/с` : "—"}
+                value={
+                  result
+                    ? `${displaySpeed(result.summary.speed_of_sound_mps).toFixed(1)} ${unitLabels.speed}`
+                    : "—"
+                }
               />
               <StatCard
                 label="Стабильность (SG)"
@@ -1683,9 +1806,9 @@ export default function App() {
                 <table className="min-w-full text-sm">
                   <thead className="bg-slate-900/90 text-slate-200 text-xs uppercase tracking-wide">
                     <tr>
-                      <th className="px-4 py-3 text-left">Distance</th>
-                      <th className="px-4 py-3 text-left">Drop (см)</th>
-                      <th className="px-4 py-3 text-left">Wind drift (см)</th>
+                      <th className="px-4 py-3 text-left">Distance ({unitLabels.distance})</th>
+                      <th className="px-4 py-3 text-left">Drop ({unitLabels.drop})</th>
+                      <th className="px-4 py-3 text-left">Wind drift ({unitLabels.drop})</th>
                       <th className="px-4 py-3 text-left">Clicks (R/L)</th>
                       <th className="px-4 py-3 text-left">Holdover</th>
                     </tr>
@@ -1694,9 +1817,11 @@ export default function App() {
                     {tableRows.length ? (
                       tableRows.map((row: any) => (
                         <tr key={row.distance_m} className="border-t border-slate-700/70 text-slate-200">
-                          <td className="px-4 py-3">{row.distance_m.toFixed(0)} м</td>
-                          <td className="px-4 py-3">{(row.drop_m * CM_PER_M).toFixed(1)}</td>
-                          <td className="px-4 py-3">{(row.drift_m * CM_PER_M).toFixed(1)}</td>
+                          <td className="px-4 py-3">
+                            {displayDistance(row.distance_m).toFixed(unitSystem === "metric" ? 0 : 1)} {unitLabels.distance}
+                          </td>
+                          <td className="px-4 py-3">{displayDrop(row.drop_m).toFixed(1)}</td>
+                          <td className="px-4 py-3">{displayDrop(row.drift_m).toFixed(1)}</td>
                           <td className="px-4 py-3">
                             {(() => {
                               const clicks = windClicksForRow(row);
@@ -1731,19 +1856,21 @@ export default function App() {
                   <table className="min-w-full text-sm">
                     <thead className="bg-slate-900/90 text-slate-200 text-xs uppercase tracking-wide">
                       <tr>
-                        <th className="px-4 py-3 text-left">Distance</th>
+                        <th className="px-4 py-3 text-left">Distance ({unitLabels.distance})</th>
                         <th className="px-4 py-3 text-left">Lead (L/R)</th>
                         <th className="px-4 py-3 text-left">Lead (Up/Down)</th>
                         <th className="px-4 py-3 text-left">Clicks (L/R)</th>
                         <th className="px-4 py-3 text-left">Clicks (U/D)</th>
-                        <th className="px-4 py-3 text-left">Lead (см)</th>
+                        <th className="px-4 py-3 text-left">Lead ({unitLabels.drop})</th>
                       </tr>
                     </thead>
                     <tbody>
                       {movingLeadRows.length ? (
                         movingLeadRows.map((row) => (
-                          <tr key={`lead-${row.distance_m}`} className="border-t border-slate-700/70 text-slate-200">
-                            <td className="px-4 py-3">{row.distance_m.toFixed(0)} м</td>
+                        <tr key={`lead-${row.distance_m}`} className="border-t border-slate-700/70 text-slate-200">
+                          <td className="px-4 py-3">
+                            {displayDistance(row.distance_m).toFixed(unitSystem === "metric" ? 0 : 1)} {unitLabels.distance}
+                          </td>
                             <td className="px-4 py-3">
                               {row.leadUnits === 0
                                 ? "0.0"
@@ -1764,10 +1891,10 @@ export default function App() {
                                 ? `${row.verticalLeadClicks > 0 ? "U" : row.verticalLeadClicks < 0 ? "D" : ""} ${Math.abs(row.verticalLeadClicks).toFixed(1)}`
                                 : "—"}
                             </td>
-                            <td className="px-4 py-3">
-                              {`${(row.leadMeters * CM_PER_M).toFixed(1)} / ${(row.verticalLeadMeters * CM_PER_M).toFixed(1)}`}
-                            </td>
-                          </tr>
+                          <td className="px-4 py-3">
+                            {`${displayDrop(row.leadMeters).toFixed(1)} / ${displayDrop(row.verticalLeadMeters).toFixed(1)}`}
+                          </td>
+                        </tr>
                         ))
                       ) : (
                         <tr>
