@@ -8,7 +8,7 @@ interface WindDialProps {
 
 export function WindDial({ directionDeg, speedMps, onChange }: WindDialProps) {
   const angle = ((directionDeg % 360) + 360) % 360;
-  const speedLabel = Number.isFinite(speedMps) ? speedMps.toFixed(1) : "—";
+  const speedLabel = Number.isFinite(speedMps) ? Math.abs(speedMps).toFixed(1) : "—";
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -62,16 +62,24 @@ export function WindDial({ directionDeg, speedMps, onChange }: WindDialProps) {
       ref={containerRef}
       className={`wind-dial ${dragging ? "wind-dial-dragging" : ""}`}
       onPointerDown={(event) => {
+        event.preventDefault();
         setDragging(true);
         (event.currentTarget as HTMLDivElement).setPointerCapture(event.pointerId);
         handlePointer(event);
       }}
       onPointerMove={(event) => {
         if (!dragging) return;
+        event.preventDefault();
         handlePointer(event);
       }}
-      onPointerUp={() => setDragging(false)}
-      onPointerLeave={() => setDragging(false)}
+      onPointerUp={(event) => {
+        event.preventDefault();
+        setDragging(false);
+      }}
+      onPointerLeave={(event) => {
+        event.preventDefault();
+        setDragging(false);
+      }}
     >
       <svg viewBox="0 0 200 200" className="wind-dial-svg" aria-label="Направление ветра">
         <circle cx="100" cy="100" r="92" fill="#050607" stroke="#2c2f35" strokeWidth="2" />

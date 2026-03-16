@@ -303,6 +303,8 @@ option {
   border-radius: 20px;
   cursor: grab;
   user-select: none;
+  touch-action: none;
+  overscroll-behavior: contain;
 }
 
 .wind-dial-dragging {
