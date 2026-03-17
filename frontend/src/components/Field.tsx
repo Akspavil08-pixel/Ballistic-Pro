@@ -31,8 +31,8 @@ export function Field({
 }: FieldProps) {
   const tooltipId = `tip-${id}`;
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-xs font-semibold flex items-center gap-2 text-slate-200" htmlFor={id}>
+    <div className="field-row flex flex-col gap-2">
+      <label className="field-label text-xs font-semibold flex items-center gap-2 text-slate-200" htmlFor={id}>
         <span className="text-ocean">{icon}</span>
         {label}
         <span
@@ -43,10 +43,10 @@ export function Field({
           ⓘ
         </span>
       </label>
-      <div className="flex items-center gap-2">
+      <div className="field-input flex items-center gap-2">
         <input
           id={id}
-          className="w-full rounded-lg border border-slate-700/70 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
+          className="field-control w-full rounded-lg border border-slate-700/70 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
           type={type}
           value={value}
           min={min}
