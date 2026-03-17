@@ -323,6 +323,14 @@ option {
       padding-bottom: calc(72px + env(safe-area-inset-bottom));
     }
 
+    .app-shell[data-mobile-pane="output"] .app-header {
+      display: none;
+    }
+
+    .app-shell[data-mobile-pane="output"] .app-body {
+      padding-top: env(safe-area-inset-top);
+    }
+
     .panel {
       min-height: 0;
     }
