@@ -152,6 +152,11 @@ option {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+}
+
+.panel-content > * {
+  min-width: 0;
 }
 
 .panel-toolbar {
@@ -322,10 +327,11 @@ option {
       min-height: 0;
     }
 
-  .panel-content {
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+    .panel-content {
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 110px;
+    }
 
   .training-card {
     display: none;
@@ -416,8 +422,13 @@ option {
     background: rgba(16, 185, 129, 0.2);
     border-color: rgba(16, 185, 129, 0.5);
     color: #ffffff;
+    }
+
+    .panel-content .overflow-x-auto {
+      max-width: 100%;
+      width: 100%;
+    }
   }
-}
 
 .segment-bar {
   display: flex;
