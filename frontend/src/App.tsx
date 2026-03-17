@@ -30,6 +30,7 @@ const DEG_TO_RAD = Math.PI / 180;
 const M_TO_YD = 1.0936133;
 const M_TO_FT = 3.28084;
 const HPA_TO_INHG = 0.0295299830714;
+const HPA_TO_MMHG = 0.750061683;
 const MM_TO_IN = 1 / 25.4;
 const CM_TO_IN = 1 / 2.54;
 const J_TO_FTLB = 0.737562149;
@@ -347,6 +348,7 @@ export default function App() {
     mode: "basic"
   });
   const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric");
+  const [pressureUnit, setPressureUnit] = useState<"hpa" | "mmhg" | "inhg">("hpa");
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const [targetId, setTargetId] = useState(targetModels[0].id);
@@ -383,13 +385,18 @@ export default function App() {
     { value: "metric", label: "Метрическая (м, °C, м/с)" },
     { value: "imperial", label: "Имперская (yd, °F, ft/s)" }
   ];
+  const pressureOptions = [
+    { value: "hpa", label: "гПа (hPa)" },
+    { value: "mmhg", label: "мм рт. ст. (mmHg)" },
+    { value: "inhg", label: "inHg" }
+  ];
   const unitLabels =
     unitSystem === "metric"
       ? {
           distance: "м",
           speed: "м/с",
           temp: "°C",
-          pressure: "гПа",
+          pressure: pressureUnit === "mmhg" ? "мм рт. ст." : pressureUnit === "inhg" ? "inHg" : "гПа",
           altitude: "м",
           length: "мм",
           smallLength: "см",
@@ -400,7 +407,7 @@ export default function App() {
           distance: "yd",
           speed: "ft/s",
           temp: "°F",
-          pressure: "inHg",
+          pressure: pressureUnit === "mmhg" ? "мм рт. ст." : pressureUnit === "inhg" ? "inHg" : "гПа",
           altitude: "ft",
           length: "in",
           smallLength: "in",
@@ -420,10 +427,16 @@ export default function App() {
     unitSystem === "metric" ? celsius : celsius * (9 / 5) + 32;
   const parseTemp = (value: number) =>
     unitSystem === "metric" ? value : (value - 32) * (5 / 9);
-  const displayPressure = (hpa: number) =>
-    unitSystem === "metric" ? hpa : hpa * HPA_TO_INHG;
-  const parsePressure = (value: number) =>
-    unitSystem === "metric" ? value : value / HPA_TO_INHG;
+  const displayPressure = (hpa: number) => {
+    if (pressureUnit === "mmhg") return hpa * HPA_TO_MMHG;
+    if (pressureUnit === "inhg") return hpa * HPA_TO_INHG;
+    return hpa;
+  };
+  const parsePressure = (value: number) => {
+    if (pressureUnit === "mmhg") return value / HPA_TO_MMHG;
+    if (pressureUnit === "inhg") return value / HPA_TO_INHG;
+    return value;
+  };
   const displayAltitude = (meters: number) =>
     unitSystem === "metric" ? meters : meters * M_TO_FT;
   const parseAltitude = (value: number) =>
@@ -804,6 +817,18 @@ export default function App() {
                     onChange={(event) => setUnitSystem(event.target.value as "metric" | "imperial")}
                   >
                     {unitOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="settings-title" style={{ marginTop: 10 }}>Давление</p>
+                  <select
+                    className="settings-select"
+                    value={pressureUnit}
+                    onChange={(event) => setPressureUnit(event.target.value as "hpa" | "mmhg" | "inhg")}
+                  >
+                    {pressureOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
