@@ -375,6 +375,7 @@ export default function App() {
   const [activeSection, setActiveSection] = useState<"weapon" | "ammo" | "optic" | "weather" | "geometry">("weapon");
   const [rightTab, setRightTab] = useState<"results" | "reticle" | "graphs" | "table">("results");
   const [mobilePane, setMobilePane] = useState<"input" | "output">("input");
+  const [mobileOutputFullscreen, setMobileOutputFullscreen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any | null>(null);
@@ -788,7 +789,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen app-shell strelok-ui" data-mobile-pane={mobilePane}>
+    <div
+      className="min-h-screen app-shell strelok-ui"
+      data-mobile-pane={mobilePane}
+      data-mobile-fullscreen={mobileOutputFullscreen ? "true" : "false"}
+    >
       <div className="app-header">
         <div className="mx-auto mobile-shell px-4 py-4 flex flex-col gap-3">
           <div className="header-top">
@@ -1572,6 +1577,27 @@ export default function App() {
               }
             }}
           >
+            {mobilePane === "output" ? (
+              <div className="mobile-output-bar mobile-only">
+                <button
+                  type="button"
+                  className="mobile-output-button"
+                  onClick={() => {
+                    setMobilePane("input");
+                    setMobileOutputFullscreen(false);
+                  }}
+                >
+                  Назад к вводу
+                </button>
+                <button
+                  type="button"
+                  className="mobile-output-button accent"
+                  onClick={() => setMobileOutputFullscreen((v) => !v)}
+                >
+                  {mobileOutputFullscreen ? "Обычный режим" : "Полный экран"}
+                </button>
+              </div>
+            ) : null}
             <div className="panel-toolbar">
               <div className="segment-bar desktop-only">
                 {[
@@ -1945,7 +1971,10 @@ export default function App() {
         <button
           type="button"
           className={`nav-item ${mobilePane === "input" ? "active" : ""}`}
-          onClick={() => setMobilePane("input")}
+          onClick={() => {
+            setMobilePane("input");
+            setMobileOutputFullscreen(false);
+          }}
         >
           <TargetIcon className="h-5 w-5" />
           <span>Ввод</span>
@@ -1955,6 +1984,7 @@ export default function App() {
           className={`nav-item ${mobilePane === "output" && rightTab === "results" ? "active" : ""}`}
           onClick={() => {
             setMobilePane("output");
+            setMobileOutputFullscreen(false);
             setRightTab("results");
           }}
         >
@@ -1966,6 +1996,7 @@ export default function App() {
           className={`nav-item ${mobilePane === "output" && rightTab === "reticle" ? "active" : ""}`}
           onClick={() => {
             setMobilePane("output");
+            setMobileOutputFullscreen(false);
             setRightTab("reticle");
           }}
         >
@@ -1977,6 +2008,7 @@ export default function App() {
           className={`nav-item ${mobilePane === "output" && rightTab === "graphs" ? "active" : ""}`}
           onClick={() => {
             setMobilePane("output");
+            setMobileOutputFullscreen(false);
             setRightTab("graphs");
           }}
         >
@@ -1988,6 +2020,7 @@ export default function App() {
           className={`nav-item ${mobilePane === "output" && rightTab === "table" ? "active" : ""}`}
           onClick={() => {
             setMobilePane("output");
+            setMobileOutputFullscreen(false);
             setRightTab("table");
           }}
         >

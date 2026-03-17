@@ -102,6 +102,33 @@ option {
   font-size: 12px;
 }
 
+.mobile-output-bar {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  display: flex;
+  gap: 8px;
+  padding: 10px 0;
+  background: linear-gradient(180deg, rgba(15, 18, 22, 0.98) 0%, rgba(15, 18, 22, 0.7) 100%);
+  backdrop-filter: blur(8px);
+}
+
+.mobile-output-button {
+  flex: 1;
+  border-radius: 999px;
+  border: 1px solid #2a313b;
+  background: #0b0f12;
+  color: #e5e7eb;
+  font-size: 11px;
+  padding: 8px 10px;
+}
+
+.mobile-output-button.accent {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #ffffff;
+}
+
 .mobile-shell {
   max-width: 520px;
 }
@@ -329,6 +356,18 @@ option {
 
     .app-shell[data-mobile-pane="output"] .app-body {
       padding-top: env(safe-area-inset-top);
+    }
+
+    .app-shell[data-mobile-fullscreen="true"] .mobile-bottom-nav {
+      display: none;
+    }
+
+    .app-shell[data-mobile-fullscreen="true"] .app-body {
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .app-shell[data-mobile-fullscreen="true"] .panel-content {
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
     }
 
     .panel {
