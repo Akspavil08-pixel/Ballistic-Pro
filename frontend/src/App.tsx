@@ -495,6 +495,19 @@ export default function App() {
     });
   }, [magnificationRange.min, magnificationRange.max]);
 
+  useEffect(() => {
+    const updateAppHeight = () => {
+      document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
+    };
+    updateAppHeight();
+    window.addEventListener("resize", updateAppHeight);
+    window.addEventListener("orientationchange", updateAppHeight);
+    return () => {
+      window.removeEventListener("resize", updateAppHeight);
+      window.removeEventListener("orientationchange", updateAppHeight);
+    };
+  }, []);
+
   const handleCalc = async () => {
     setLoading(true);
     setError(null);
@@ -512,6 +525,7 @@ export default function App() {
       localStorage.setItem(CACHE_KEY, JSON.stringify(data));
       setRightTab("results");
       setMobilePane("output");
+      setMobileOutputFullscreen(true);
     } catch (err: any) {
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
@@ -1591,6 +1605,13 @@ export default function App() {
                 </button>
                 <button
                   type="button"
+                  className="mobile-output-button"
+                  onClick={handleCalc}
+                >
+                  {loading ? "Расчет..." : "Рассчитать"}
+                </button>
+                <button
+                  type="button"
                   className="mobile-output-button accent"
                   onClick={() => setMobileOutputFullscreen((v) => !v)}
                 >
@@ -1984,7 +2005,7 @@ export default function App() {
           className={`nav-item ${mobilePane === "output" && rightTab === "results" ? "active" : ""}`}
           onClick={() => {
             setMobilePane("output");
-            setMobileOutputFullscreen(false);
+            setMobileOutputFullscreen(true);
             setRightTab("results");
           }}
         >
@@ -1996,7 +2017,7 @@ export default function App() {
           className={`nav-item ${mobilePane === "output" && rightTab === "reticle" ? "active" : ""}`}
           onClick={() => {
             setMobilePane("output");
-            setMobileOutputFullscreen(false);
+            setMobileOutputFullscreen(true);
             setRightTab("reticle");
           }}
         >
@@ -2008,7 +2029,7 @@ export default function App() {
           className={`nav-item ${mobilePane === "output" && rightTab === "graphs" ? "active" : ""}`}
           onClick={() => {
             setMobilePane("output");
-            setMobileOutputFullscreen(false);
+            setMobileOutputFullscreen(true);
             setRightTab("graphs");
           }}
         >
@@ -2020,7 +2041,7 @@ export default function App() {
           className={`nav-item ${mobilePane === "output" && rightTab === "table" ? "active" : ""}`}
           onClick={() => {
             setMobilePane("output");
-            setMobileOutputFullscreen(false);
+            setMobileOutputFullscreen(true);
             setRightTab("table");
           }}
         >

@@ -35,6 +35,7 @@ option {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  height: var(--app-height, 100vh);
 }
 
 .app-header {
@@ -333,7 +334,7 @@ option {
     }
 
     .app-shell {
-      height: 100svh;
+      height: var(--app-height, 100svh);
       padding-bottom: env(safe-area-inset-bottom);
     }
 
