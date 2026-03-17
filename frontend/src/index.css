@@ -357,18 +357,31 @@ option {
 
     .app-shell[data-mobile-pane="output"] .app-body {
       padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
-    .app-shell[data-mobile-fullscreen="true"] .mobile-bottom-nav {
+    .app-shell[data-mobile-pane="output"] .mobile-bottom-nav {
       display: none;
     }
 
     .app-shell[data-mobile-fullscreen="true"] .app-body {
-      padding-bottom: env(safe-area-inset-bottom);
+      padding: 0;
+      overflow: hidden;
     }
 
     .app-shell[data-mobile-fullscreen="true"] .panel-content {
       padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    }
+
+    .app-shell[data-mobile-fullscreen="true"] .right-panel {
+      position: fixed;
+      top: env(safe-area-inset-top);
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 20;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: #0f1115;
     }
 
     .panel {
