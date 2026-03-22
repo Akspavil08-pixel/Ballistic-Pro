@@ -333,6 +333,11 @@ export default function App() {
     wind_speed_mps: 3,
     wind_direction_deg: 90
   });
+  const [geoWeatherEnabled, setGeoWeatherEnabled] = useState(false);
+  const [geoWeatherStatus, setGeoWeatherStatus] = useState<
+    "idle" | "requesting" | "success" | "denied" | "error"
+  >("idle");
+  const [geoWeatherMessage, setGeoWeatherMessage] = useState<string | null>(null);
 
   const [geometry, setGeometry] = useState({
     distance_m: 300,
@@ -458,6 +463,151 @@ export default function App() {
     unitSystem === "metric" ? meters * CM_PER_M : meters * CM_PER_M * CM_TO_IN;
   const displayEnergy = (joules: number) =>
     unitSystem === "metric" ? joules : joules * J_TO_FTLB;
+
+  const fetchWeatherByCoords = async (latitude: number, longitude: number) => {
+    const params = new URLSearchParams({
+      latitude: String(latitude),
+      longitude: String(longitude),
+      current_weather: "true",
+      hourly: "relativehumidity_2m,surface_pressure",
+      timezone: "auto"
+    });
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
+    if (!response.ok) throw new Error("weather");
+    const data = await response.json();
+    const current = data?.current_weather;
+    if (!current) throw new Error("weather");
+
+    const windSpeedMps = Number(current.windspeed) / 3.6;
+    const windDirectionDeg = Number(current.winddirection);
+    const temperatureC = Number(current.temperature);
+    const elevationM = Number(data?.elevation);
+
+    let humidityPercent: number | null = null;
+    let pressureHpa: number | null = null;
+
+    const hourlyTimes: string[] | undefined = data?.hourly?.time;
+    if (Array.isArray(hourlyTimes) && current.time) {
+      const idx = hourlyTimes.indexOf(current.time);
+      if (idx !== -1) {
+        const humidityArr = data?.hourly?.relativehumidity_2m;
+        const pressureArr = data?.hourly?.surface_pressure;
+        humidityPercent = Number(humidityArr?.[idx]);
+        pressureHpa = Number(pressureArr?.[idx]);
+      }
+    }
+
+    return {
+      temperatureC,
+      pressureHpa,
+      humidityPercent,
+      elevationM,
+      windSpeedMps,
+      windDirectionDeg
+    };
+  };
+
+  const fetchCoordsByIp = async () => {
+    const response = await fetch("https://ipapi.co/json/");
+    if (!response.ok) throw new Error("ip");
+    const data = await response.json();
+    const latitude = Number(data?.latitude ?? data?.lat);
+    const longitude = Number(data?.longitude ?? data?.lon);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      throw new Error("ip");
+    }
+    return { latitude, longitude, label: data?.city ? String(data.city) : null };
+  };
+
+  const applyWeatherByCoords = async (latitude: number, longitude: number, sourceLabel: string) => {
+    const wx = await fetchWeatherByCoords(latitude, longitude);
+    setWeather((prev) => ({
+      ...prev,
+      temperature_c: Number.isFinite(wx.temperatureC) ? wx.temperatureC : prev.temperature_c,
+      pressure_hpa: Number.isFinite(wx.pressureHpa ?? NaN) ? (wx.pressureHpa as number) : prev.pressure_hpa,
+      humidity_percent: Number.isFinite(wx.humidityPercent ?? NaN)
+        ? (wx.humidityPercent as number)
+        : prev.humidity_percent,
+      altitude_m: Number.isFinite(wx.elevationM) ? wx.elevationM : prev.altitude_m,
+      wind_speed_mps: Number.isFinite(wx.windSpeedMps) ? Math.max(0, wx.windSpeedMps) : prev.wind_speed_mps,
+      wind_direction_deg: Number.isFinite(wx.windDirectionDeg)
+        ? Math.max(0, Math.min(360, wx.windDirectionDeg))
+        : prev.wind_direction_deg
+    }));
+    setGeoWeatherStatus("success");
+    setGeoWeatherMessage(`Погода обновлена (${sourceLabel}).`);
+  };
+
+  const requestGeoWeather = () => {
+    if (!navigator.geolocation) {
+      setGeoWeatherStatus("requesting");
+      setGeoWeatherMessage("Геолокация недоступна, пробуем по IP…");
+      fetchCoordsByIp()
+        .then(({ latitude, longitude, label }) =>
+          applyWeatherByCoords(latitude, longitude, label ? `по IP: ${label}` : "по IP")
+        )
+        .catch(() => {
+          setGeoWeatherStatus("error");
+          setGeoWeatherMessage("Не удалось получить местоположение.");
+        });
+      return;
+    }
+
+    setGeoWeatherStatus("requesting");
+    setGeoWeatherMessage("Запрашиваем геопозицию…");
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setGeometry((g) => ({ ...g, latitude_deg: Number(latitude.toFixed(5)) }));
+
+        try {
+          await applyWeatherByCoords(latitude, longitude, "по геопозиции");
+        } catch (err) {
+          setGeoWeatherStatus("requesting");
+          setGeoWeatherMessage("Не удалось по GPS, пробуем по IP…");
+          fetchCoordsByIp()
+            .then(({ latitude: ipLat, longitude: ipLon, label }) =>
+              applyWeatherByCoords(ipLat, ipLon, label ? `по IP: ${label}` : "по IP")
+            )
+            .catch(() => {
+              setGeoWeatherStatus("error");
+              setGeoWeatherMessage("Не удалось получить погоду. Проверьте интернет.");
+            });
+        }
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setGeoWeatherStatus("requesting");
+          setGeoWeatherMessage("Геопозиция запрещена, пробуем по IP…");
+        } else {
+          setGeoWeatherStatus("requesting");
+          setGeoWeatherMessage("Не удалось получить геопозицию, пробуем по IP…");
+        }
+        fetchCoordsByIp()
+          .then(({ latitude, longitude, label }) =>
+            applyWeatherByCoords(latitude, longitude, label ? `по IP: ${label}` : "по IP")
+          )
+          .catch(() => {
+            setGeoWeatherStatus("error");
+            setGeoWeatherMessage("Не удалось получить местоположение.");
+          });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
+  const handleSectionSelect = (section: typeof activeSection) => {
+    setActiveSection(section);
+    setMobilePane("input");
+    if (section === "weather" && !geoWeatherEnabled) {
+      const allow = window.confirm("Использовать геопозицию для погоды?");
+      if (allow) {
+        setGeoWeatherEnabled(true);
+        requestGeoWeather();
+      }
+    }
+  };
 
   const activeReticle =
     reticleProfiles.find((reticle) => reticle.id === reticleId) ?? reticleProfiles[0];
@@ -881,16 +1031,22 @@ export default function App() {
                   { id: "weapon", label: "Оружие", icon: <TargetIcon className="h-4 w-4" /> },
                   { id: "ammo", label: "Патрон", icon: <BulletIcon className="h-4 w-4" /> },
                   { id: "optic", label: "Прицел", icon: <ScopeIcon className="h-4 w-4" /> },
-                  { id: "weather", label: "Погода", icon: <WeatherIcon className="h-4 w-4" /> },
+                  {
+                    id: "weather",
+                    label: (
+                      <span className="inline-flex items-center gap-1">
+                        <span>Погода</span>
+                        {geoWeatherEnabled ? <span className="text-emerald-400">✓</span> : null}
+                      </span>
+                    ),
+                    icon: <WeatherIcon className="h-4 w-4" />
+                  },
                   { id: "geometry", label: "Дистанция", icon: <DistanceIcon className="h-4 w-4" /> }
                 ].map((item) => (
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => {
-                      setActiveSection(item.id as typeof activeSection);
-                      setMobilePane("input");
-                    }}
+                    onClick={() => handleSectionSelect(item.id as typeof activeSection)}
                     className={`segment-pill segment-pill-icon ${activeSection === item.id ? "active" : ""}`}
                   >
                 <span className="segment-icon">{item.icon}</span>
@@ -1194,6 +1350,41 @@ export default function App() {
 
             {activeSection === "weather" ? (
               <SectionCard title="4. Погода" subtitle="Текущие условия">
+            <div className="mb-3 rounded-lg border border-slate-700/70 bg-slate-900/70 p-3 text-xs text-slate-300">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="font-semibold text-white">Геопозиция</p>
+                  <p className="mt-1 text-slate-200">
+                    Можно автоматически получить погоду по вашему местоположению.
+                  </p>
+                </div>
+                <label className="inline-flex items-center gap-2 text-xs text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={geoWeatherEnabled}
+                    onChange={(event) => {
+                      const next = event.target.checked;
+                      setGeoWeatherEnabled(next);
+                      if (next) requestGeoWeather();
+                    }}
+                  />
+                  Использовать
+                </label>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded-md border border-slate-600/70 bg-slate-800/80 px-3 py-1 text-xs text-slate-200 transition hover:bg-slate-700/80 disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={requestGeoWeather}
+                  disabled={!geoWeatherEnabled || geoWeatherStatus === "requesting"}
+                >
+                  {geoWeatherStatus === "requesting" ? "Запрашиваем…" : "Обновить по геопозиции"}
+                </button>
+                {geoWeatherMessage ? (
+                  <span className="text-xs text-slate-300">{geoWeatherMessage}</span>
+                ) : null}
+              </div>
+            </div>
             <div className="weather-strelok">
               <div className="weather-readouts">
               <Field
