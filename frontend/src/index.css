@@ -355,6 +355,20 @@ option {
       display: none;
     }
 
+    .header-actions {
+      width: 100%;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .settings-popover {
+      position: static;
+      width: 100%;
+      min-width: 0;
+      margin-top: 8px;
+    }
+
     .app-shell[data-mobile-pane="output"] .app-body {
       padding-top: env(safe-area-inset-top);
       padding-bottom: env(safe-area-inset-bottom);
