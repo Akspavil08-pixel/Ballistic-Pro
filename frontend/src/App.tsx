@@ -1358,18 +1358,16 @@ export default function App() {
                     Можно автоматически получить погоду по вашему местоположению.
                   </p>
                 </div>
-                <label className="inline-flex items-center gap-2 text-xs text-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={geoWeatherEnabled}
-                    onChange={(event) => {
-                      const next = event.target.checked;
-                      setGeoWeatherEnabled(next);
-                      if (next) requestGeoWeather();
-                    }}
-                  />
-                  Использовать
-                </label>
+              </div>
+              <div className="mt-2">
+                <Toggle
+                  label="Использовать геопозицию"
+                  checked={geoWeatherEnabled}
+                  onChange={(next) => {
+                    setGeoWeatherEnabled(next);
+                    if (next) requestGeoWeather();
+                  }}
+                />
               </div>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <button
